@@ -59,6 +59,7 @@
     dua # Interactive disk-use analyzer
     file # Show file type
     tree # Display directory trees
+    xsel # Clipboard
 
     # --- Archives & Compression ---
     zip # File compression and archiving
@@ -286,9 +287,33 @@
             command = "nixfmt";
           };
         }
+        {
+          name = "hlsl";
+          scope = "source.hlsl";
+          injection-regex = "hlsl";
+          file-types = [
+            "hlsl"
+            "fx"
+            "cginc"
+            "compute"
+          ];
+          comment-token = "//";
+          grammar = "c";
+          language-servers = [ ];
+          indent = {
+            tab-width = 4;
+            unit = "    ";
+          };
+        }
       ];
     };
   };
+
+  xdg.configFile."helix/runtime/queries/hlsl/highlights.scm".text = "; inherits: c";
+  xdg.configFile."helix/runtime/queries/hlsl/injections.scm".text = "; inherits: c";
+  xdg.configFile."helix/runtime/queries/hlsl/locals.scm".text = "; inherits: c";
+  xdg.configFile."helix/runtime/queries/hlsl/textobjects.scm".text = "; inherits: c";
+  xdg.configFile."helix/runtime/queries/hlsl/indents.scm".text = "; inherits: c";
 
   # -------------------------------------------------------------------------
   # SSH & Services
