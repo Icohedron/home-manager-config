@@ -22,9 +22,7 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 Open a temporary shell with `git` and `home-manager` to clone the repository and authenticate if necessary:
 
 ```bash
-nix-shell -p home-manager git gh
-# Optional: Login to GitHub if you need to access private repos
-gh auth login
+nix-shell -p home-manager git
 ```
 
 ### 3. Clone and Configure
