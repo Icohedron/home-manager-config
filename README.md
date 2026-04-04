@@ -31,7 +31,7 @@ gh auth login
 Clone this repository to a directory of your choice (e.g., `~/nix`):
 
 ```bash
-git clone https://github.com/Icohedron/home-manager-generic.git ~/nix
+git clone https://github.com/Icohedron/Home-Manager-Config.git ~/nix
 cd ~/nix
 ```
 
