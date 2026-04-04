@@ -8,8 +8,15 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, flake-compat }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      flake-compat,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
       in
@@ -24,16 +31,16 @@
                 llvmPackages.stdenv.cc.override { inherit (llvmPackages) bintools; }
               );
             }
-        {
-          name = "rust-env";
-          buildInputs = [
-            rustc
-            cargo
-            cargo-xwin
-            rustfmt
-            rust-analyzer
-          ];
-        };
+            {
+              name = "rust-env";
+              buildInputs = [
+                rustc
+                cargo
+                cargo-xwin
+                rustfmt
+                rust-analyzer
+              ];
+            };
       }
     );
 }

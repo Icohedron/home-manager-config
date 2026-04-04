@@ -11,4 +11,3 @@ let
   };
 in
 (import flake-compat { inherit src; }).shellNix
-

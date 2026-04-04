@@ -17,6 +17,14 @@ nix flake check
 nix build .#homeConfigurations."$USER".activationPackage --dry-run
 ~~~
 
+## format
+
+> Formats all Nix files in the repository using nixfmt
+
+~~~sh
+find . -type f -name "*.nix" -exec nixfmt {} +
+~~~
+
 ## update
 
 > Updates the flake.lock to use the latest revisions of inputs such as nixpkgs

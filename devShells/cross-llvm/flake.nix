@@ -30,7 +30,9 @@
         systemParts = nixpkgs.lib.splitString "-" system;
         arch = nixpkgs.lib.head systemParts;
 
-        llvmStdenv = overrideCC llvmPackages.stdenv (llvmPackages.stdenv.cc.override { inherit (llvmPackages) bintools; });
+        llvmStdenv = overrideCC llvmPackages.stdenv (
+          llvmPackages.stdenv.cc.override { inherit (llvmPackages) bintools; }
+        );
 
         LLVMDir = "~/workspace/llvm-project"; # FIXME: Path to llvm-project
         OffloadTestDir = "~/workspace/offload-test-suite"; # FIXME: Path to offload-test-suite

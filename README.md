@@ -70,5 +70,6 @@ Once installed, your environment includes a task runner called `mask`. You can u
 
 * `mask build` - Rebuild and apply the current configuration.
 * `mask check` - Dry-run build and evaluate the flake to ensure there are no errors.
+* `mask format` - Formats all Nix files in the repository using `nixfmt`.
 * `mask update` - Update `flake.lock` with the latest package versions.
 * `mask clean` - Run the Nix garbage collector to free up disk space.
