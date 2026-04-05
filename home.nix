@@ -141,14 +141,30 @@
 
   programs.zellij = {
     enable = true; # A better tmux
-    settings = {
-      show_startup_tips = false;
-      mouse_mode = true;
-    };
   };
+
+  xdg.configFile."zellij/config.kdl".text = ''
+    show_startup_tips false
+    mouse_mode true
+
+    keybinds {
+        shared_except "locked" {
+            bind "Alt g" {
+                Run "lazygit" {
+                    floating true
+                    x "10%"
+                    y "10%"
+                    width "80%"
+                    height "80%"
+                }
+            }
+        }
+    }
+  '';
 
   programs.zoxide.enable = true; # A better cd
 
+  programs.lazygit.enable = true; # A simple terminal UI for git commands
   programs.gh.enable = true; # GitHub CLI
   programs.gitui.enable = true; # Terminal UI for git
   programs.delta.enable = true; # A better diff and pager for git
