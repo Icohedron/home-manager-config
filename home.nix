@@ -203,12 +203,32 @@
     userSettings = {
       helix_mode = true;
       base_keymap = "VSCode";
-      theme = "Catppuccin Mocha";
-      icon_theme = "Catppuccin Mocha";
+      theme = "Aura Dark";
+      icon_theme = "Warm Charmed Icons";
+      theme_overrides = {
+        "Aura Dark" = {
+          "border" = "#15141C";
+          "border.variant" = "#15141C";
+          "panel.background" = "#15141C";
+          "tab_bar.background" = "#15141C";
+          "terminal.background" = "#15141C";
+          "tab.inactive_background" = "#15141C";
+          "panel.focused_border" = "#4E466E";
+        };
+      };
+      title_bar = {
+        show_user_menu = false;
+        show_user_picture = false;
+        show_sign_in = false;
+      };
+      tab_bar = {
+        show = false;
+      };
+      current_line_highlight = "none";
     };
     extensions = [
-      "catppuccin"
-      "catppuccin-icons"
+      "aura-theme"
+      "charmed-icons"
       "nix"
     ];
   };
