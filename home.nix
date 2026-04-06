@@ -196,18 +196,20 @@
   # -------------------------------------------------------------------------
   # Editors
   # -------------------------------------------------------------------------
-  
+
   # --- Zed ---
   programs.zed-editor = {
     enable = true;
     userSettings = {
       helix_mode = true;
-      theme = {
-        mode = "dark";
-        light = "Ayu Light";
-        dark = "Ayu Dark";
-      };
+      theme = "Catppuccin Mocha";
+      icon_theme = "Catppuccin Mocha";
     };
+    extensions = [
+      "catppuccin"
+      "catppuccin-icons"
+      "nix"
+    ];
   };
 
   # --- Helix ---
@@ -362,4 +364,9 @@
     enableDefaultConfig = false; # Silence warning
     matchBlocks."*".addKeysToAgent = "yes";
   };
+
+  # -------------------------------------------------------------------------
+  # Browser
+  # -------------------------------------------------------------------------
+  programs.firefox.enable = true;
 }
