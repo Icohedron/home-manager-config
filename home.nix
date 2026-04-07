@@ -269,7 +269,7 @@
         show_sign_in = false;
       };
       tab_bar = {
-        show = false;
+        show = true;
       };
       current_line_highlight = "none";
       lsp = {
@@ -291,6 +291,18 @@
         context = "(VimControl && !menu)";
         bindings = {
           "space" = null;
+          "space space g" = "git_panel::Toggle";
+          "space space d" = "debug_panel::Toggle";
+          "space space c" = "collab_panel::Toggle";
+          "space space o" = "outline_panel::Toggle";
+          "space space p" = "project_panel::Toggle";
+          "space space n" = "notification_panel::Toggle";
+        };
+      }
+      {
+        "context" = "(vim_mode == helix_normal || vim_mode == helix_select) && !menu";
+        "bindings" = {
+          "space b" = "tab_switcher::Toggle";
         };
       }
     ];
