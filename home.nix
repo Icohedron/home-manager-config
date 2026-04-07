@@ -244,6 +244,10 @@
     enable = true;
     userSettings = {
       helix_mode = true;
+      which_key = {
+        enabled = true;
+        delay_ms = 100;
+      };
       base_keymap = "VSCode";
       theme = "Aura Dark";
       icon_theme = "Warm Charmed Icons";
@@ -273,6 +277,14 @@
       "aura-theme"
       "charmed-icons"
       "nix"
+    ];
+    userKeymaps = [
+      {
+        context = "(VimControl && !menu)";
+        bindings = {
+          "space" = null;
+        };
+      }
     ];
   };
 
