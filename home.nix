@@ -199,6 +199,11 @@
     }
   '';
 
+  programs.direnv = {
+    enable = true; # Auto-load/unload envs per directory
+    nix-direnv.enable = true; # Faster nix integration, caches dev shells
+  };
+
   programs.zoxide.enable = true; # A better cd
 
   programs.lazygit.enable = true; # A simple terminal UI for git commands
