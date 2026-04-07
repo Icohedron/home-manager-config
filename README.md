@@ -12,11 +12,7 @@ This repository provides a declarative, reproducible system configuration for Li
 ## Getting Started
 
 ### 1. Install Nix
-If you haven't already, install the Nix package manager. We recommend the [Determinate Systems Nix installer](https://github.com/DeterminateSystems/nix-installer) for a fast and reliable setup with flakes enabled by default:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-```
+If you haven't already, install the Nix package manager. We recommend the [Determinate Systems Nix installer](https://github.com/DeterminateSystems/nix-installer) for a fast and reliable setup with flakes, lazy trees, and other nice features enabled by default. Otherwise, install Nix from the official [NixOS website](https://nixos.org/download/).
 
 ### 2. Prepare Environment
 Open a temporary shell with `git` and `home-manager` to clone the repository and authenticate if necessary:
