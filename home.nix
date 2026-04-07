@@ -8,6 +8,7 @@
   homeDirectory,
   gitUsername,
   gitEmail,
+  useWayland,
   ...
 }:
 {
@@ -59,8 +60,7 @@
     dua # Interactive disk-use analyzer
     file # Show file type
     tree # Display directory trees
-    xsel # Clipboard
-    wl-clipboard # Clipboard
+    (if useWayland then wl-clipboard else xsel) # Clipboard
 
     # --- Archives & Compression ---
     zip # File compression and archiving

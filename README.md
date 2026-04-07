@@ -43,6 +43,7 @@ cd ~/nix
     homeDirectory = "/home/your-username"; # Update to your actual home directory
     gitUsername = "Your Name";
     gitEmail = "your.email@example.com";
+    useWayland = true;
   }
 ]
 ```

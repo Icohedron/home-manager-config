@@ -51,6 +51,7 @@
                 homeDirectory
                 gitUsername
                 gitEmail
+                useWayland
                 ;
             };
             modules = [
