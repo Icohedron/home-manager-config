@@ -84,42 +84,6 @@
     # --- Presentations & Misc ---
     presenterm # Presentations written in Markdown, rendered in-terminal
     doitlive # Tool for live presentations in the terminal
-
-    # --- AI / Helix Integration ---
-    # Pipes selected text through opencode for AI-powered code transformations.
-    # Usage in Helix: select text, press |, type: ai-replace "your prompt"
-    (writeShellScriptBin "ai-replace" ''
-      set -euo pipefail
-
-      PROMPT="''${1:-Improve this code}"
-      INPUT=$(cat)
-
-      if [ -z "$INPUT" ]; then
-        exit 0
-      fi
-
-      INSTRUCTIONS="You are a pure code transformation function."
-      INSTRUCTIONS="$INSTRUCTIONS Your ONLY output must be the transformed code itself."
-      INSTRUCTIONS="$INSTRUCTIONS RULES:"
-      INSTRUCTIONS="$INSTRUCTIONS Output NOTHING except the final code."
-      INSTRUCTIONS="$INSTRUCTIONS No markdown fences."
-      INSTRUCTIONS="$INSTRUCTIONS No explanations, comments about changes, or preamble."
-      INSTRUCTIONS="$INSTRUCTIONS No conversational text."
-      INSTRUCTIONS="$INSTRUCTIONS No trailing newline."
-      INSTRUCTIONS="$INSTRUCTIONS If you cannot transform the code, return it unchanged."
-      INSTRUCTIONS="$INSTRUCTIONS Preserve the original indentation style."
-
-      RESULT=$(printf '%s' "$INPUT" | opencode run --format json \
-        "$INSTRUCTIONS $PROMPT:")
-
-      # Extract text parts from JSON, strip markdown fences if they slipped through
-      printf '%s' "$RESULT" | jq -r -s '
-        [ .[] | select(.type == "text") | .part.text ] | join("")
-      ' | sed -E '
-        /^```[a-zA-Z]*$/d
-        /^```$/d
-      '
-    '')
   ];
 
   home.sessionVariables = { };
@@ -314,15 +278,6 @@
     defaultEditor = true;
     settings = {
       theme = "catppuccin_mocha";
-
-      keys.normal.space.a = {
-        i = ":pipe ai-replace 'Improve this code'";
-        d = ":pipe ai-replace 'Add documentation comments to this code'";
-        r = ":pipe ai-replace 'Refactor this code'";
-        e = ":pipe ai-replace 'Explain this code by adding inline comments'";
-        t = ":pipe ai-replace 'Write tests for this code'";
-        f = ":pipe ai-replace 'Fix any bugs in this code'";
-      };
 
       editor = {
         auto-save = true;
