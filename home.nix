@@ -255,12 +255,12 @@
         context = "(VimControl && !menu)";
         bindings = {
           "space" = null;
-          "space space g" = "git_panel::Toggle";
-          "space space d" = "debug_panel::Toggle";
           "space space c" = "collab_panel::Toggle";
-          "space space o" = "outline_panel::Toggle";
-          "space space p" = "project_panel::Toggle";
+          "space G" = "debug_panel::Toggle";
+          "space e" = "project_panel::Toggle";
+          "space space g" = "git_panel::Toggle";
           "space space n" = "notification_panel::Toggle";
+          "space space o" = "outline_panel::Toggle";
         };
       }
       {
