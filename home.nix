@@ -207,6 +207,21 @@
   programs.zed-editor = {
     enable = true;
     userSettings = {
+      agent_servers = {
+        opencode = {
+          type = "registry";
+        };
+      };
+      agent = {
+        default_model = {
+          provider = "copilot_chat";
+          model = "claude-opus-4.6";
+          enable_thinking = true;
+          effort = "high";
+        };
+        favorite_models = [ ];
+        model_parameters = [ ];
+      };
       helix_mode = true;
       which_key = {
         enabled = true;
