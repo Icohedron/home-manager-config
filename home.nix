@@ -279,6 +279,14 @@
           "space space g" = "git_panel::Toggle";
           "space space n" = "notification_panel::Toggle";
           "space space o" = "outline_panel::Toggle";
+          "] g" = "editor::GoToHunk";
+          "[ g" = "editor::GoToPreviousHunk";
+          "] G" = "editor::GoToPreviousDiagnostic";
+          "[ G" = "editor::GoToHunk";
+          "] d" = "editor::GoToDiagnostic";
+          "[ d" = "editor::GoToPreviousDiagnostic";
+          "] D" = "editor::GoToPreviousDiagnostic";
+          "[ D" = "editor::GoToDiagnostic";
         };
       }
       {
