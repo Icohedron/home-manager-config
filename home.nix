@@ -147,6 +147,7 @@
   xdg.configFile."zellij/config.kdl".text = ''
     show_startup_tips false
     mouse_mode true
+    default_shell "nu"
 
     keybinds {
         shared_except "locked" {
