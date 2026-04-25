@@ -278,7 +278,6 @@
           "space G" = "debug_panel::Toggle";
           "space e" = "project_panel::Toggle";
           "space space g" = "git_panel::Toggle";
-          "space space n" = "notification_panel::Toggle";
           "space space o" = "outline_panel::Toggle";
           "] g" = "editor::GoToHunk";
           "[ g" = "editor::GoToPreviousHunk";
