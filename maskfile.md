@@ -27,10 +27,29 @@ find . -type f -name "*.nix" -exec nixfmt {} +
 
 ## update
 
-> Updates the flake.lock to use the latest revisions of inputs such as nixpkgs
+> Updates flake inputs and checks pi packages for newer versions
 
 ~~~sh
 nix flake update
+
+echo
+echo "Checking for pi package updates..."
+echo
+
+for SPEC in $(sed -n '/# pi-pkgs/,/]/p' home.nix | grep -oP '"[^"]+"' | tr -d '"'); do
+  PKG="${SPEC%@*}"
+  CUR_VER="${SPEC##*@}"
+  LATEST=$(curl -sf "https://registry.npmjs.org/$PKG/latest" | jq -r '.version')
+
+  if [ "$CUR_VER" = "$LATEST" ]; then
+    echo "  ✓ $PKG $CUR_VER"
+  else
+    echo "  ↑ $PKG $CUR_VER → $LATEST"
+  fi
+done
+
+echo
+echo "To update: edit the version in home.nix, then run: mask build"
 ~~~
 
 ## clean

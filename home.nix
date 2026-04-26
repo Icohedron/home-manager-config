@@ -218,6 +218,9 @@
 
   home.sessionVariables = { };
 
+  # The npm packages for Pi can come with binaries that should be on the PATH.
+  home.sessionPath = [ "$HOME/.pi/npm/bin" ];
+
   # -------------------------------------------------------------------------
   # Shell & Shell Integration
   # -------------------------------------------------------------------------
@@ -579,6 +582,78 @@
   xdg.configFile."helix/runtime/queries/hlsl/locals.scm".text = "; inherits: c";
   xdg.configFile."helix/runtime/queries/hlsl/textobjects.scm".text = "; inherits: c";
   xdg.configFile."helix/runtime/queries/hlsl/indents.scm".text = "; inherits: c";
+
+  # -------------------------------------------------------------------------
+  # Pi Coding Agent
+  # -------------------------------------------------------------------------
+
+  # Settings — copied (not symlinked) so pi can still write to the file.
+  # Reset to this declarative baseline on every `home-manager switch`.
+  home.activation.piSettings =
+    let
+      piPackages = [ # pi-pkgs
+        "pi-btw@0.3.7"
+        "@victor-software-house/pi-openai-proxy@4.9.3"
+        "@ifi/oh-pi-prompts@0.4.4"
+      ];
+
+      # npm wrapper — redirects global prefix to writable ~/.pi/npm
+      # since Nix's nodejs has its prefix in the read-only store.
+      npm-wrapper = pkgs.writeShellScriptBin "npm" ''
+        export NPM_CONFIG_PREFIX="$HOME/.pi/npm"
+        export PATH="${pkgs.nodejs}/bin:$PATH"
+        exec ${pkgs.nodejs}/bin/npm "$@"
+      '';
+
+      settings = builtins.toJSON {
+        npmCommand = [ "${npm-wrapper}/bin/npm" ];
+        packages = map (p: "npm:${p}") piPackages;
+      };
+    in
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      pi_dir="$HOME/.pi/agent"
+      npm="${npm-wrapper}/bin/npm"
+      $DRY_RUN_CMD mkdir -p "$pi_dir"
+      $DRY_RUN_CMD cp --remove-destination \
+        ${pkgs.writeText "pi-settings.json" settings} \
+        "$pi_dir/settings.json"
+      $DRY_RUN_CMD chmod 644 "$pi_dir/settings.json"
+
+      # Install declared packages
+      ${lib.concatMapStringsSep "\n      " (pkg:
+        "$DRY_RUN_CMD $npm install -g ${pkg}"
+      ) piPackages}
+
+      # Uninstall packages not in the declared list
+      declared=${pkgs.writeText "pi-declared-pkgs" (lib.concatMapStringsSep "\n" (pkg:
+        # Strip version: "@scope/name@ver" -> "@scope/name", "name@ver" -> "name"
+        let parts = builtins.match "(@[^@]+)@.*" pkg; in
+        if parts != null then builtins.head parts
+        else builtins.head (builtins.match "([^@]+)@.*" pkg)
+      ) piPackages)}
+      for installed in $($npm ls -g --depth=0 --parseable 2>/dev/null | tail -n+2); do
+        name=$(basename "$installed")
+        parent=$(basename "$(dirname "$installed")")
+        if [[ "$parent" == @* ]]; then
+          name="$parent/$name"
+        fi
+        if ! grep -qxF "$name" "$declared"; then
+          echo "Removing undeclared pi package: $name"
+          $DRY_RUN_CMD $npm uninstall -g "$name"
+        fi
+      done
+    '';
+
+  # Extensions — symlinked from the Nix store (read-only is fine).
+  # home.file.".pi/agent/extensions/my-extension.ts".text = ''
+  #   import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+  #
+  #   export default function (pi: ExtensionAPI) {
+  #     pi.on("session_start", async (_event, ctx) => {
+  #       ctx.ui.notify("Extension loaded!", "info");
+  #     });
+  #   }
+  # '';
 
   # -------------------------------------------------------------------------
   # SSH & Services
