@@ -109,17 +109,31 @@
 
       exec bwrap \
         --ro-bind / / \
+        --ro-bind /dev/null /usr/bin/distrobox-host-exec \
+        --ro-bind /dev/null /usr/bin/distrobox-export \
+        --ro-bind /dev/null /usr/bin/host-spawn \
+        --ro-bind ${pkgs.emptyFile} /etc/profile.d/distrobox_profile.sh \
+        --tmpfs /run/host \
         --bind ~/.pi ~/.pi \
         --proc /proc \
         --dev /dev \
         --tmpfs /tmp \
-        --bind "$HOME/.keychain" "$HOME/.keychain" \
+        --unshare-pid \
+        --unshare-ipc \
+        --ro-bind "$HOME/.keychain" "$HOME/.keychain" \
+        --ro-bind "$SSH_AUTH_SOCK" "$SSH_AUTH_SOCK" \
         --bind "$HOME/.local/share" "$HOME/.local/share" \
         --bind "$HOME/.cache" "$HOME/.cache" \
         --bind "$HOME/.config" "$HOME/.config" \
         --bind "$WORK_DIR" "$WORK_DIR" \
         --setenv HOME "$HOME" \
         --setenv PATH "$PATH" \
+        --setenv SSH_AUTH_SOCK "$SSH_AUTH_SOCK" \
+        --setenv DISPLAY "''${DISPLAY:-}" \
+        --setenv WAYLAND_DISPLAY "''${WAYLAND_DISPLAY:-}" \
+        --setenv XAUTHORITY "''${XAUTHORITY:-}" \
+        --setenv XAUTHLOCALHOSTNAME "''${XAUTHLOCALHOSTNAME:-}" \
+        --unsetenv DBUS_SESSION_BUS_ADDRESS \
         --setenv SANDBOX "1" \
         --chdir "$WORK_DIR" \
         --die-with-parent \
@@ -145,6 +159,12 @@
   };
 
   programs.bash.enable = true;
+  programs.bash.initExtra = ''
+    # Skip keychain inside sandbox — reuse the inherited SSH_AUTH_SOCK instead
+    if [[ -z "$SANDBOX" ]]; then
+      eval "$(SHELL=bash ${pkgs.keychain}/bin/keychain --eval --quiet id_ed25519)"
+    fi
+  '';
 
   programs.nushell = {
     enable = true;
@@ -495,7 +515,7 @@
   # -------------------------------------------------------------------------
   programs.keychain = {
     enable = true;
-    enableBashIntegration = true;
+    enableBashIntegration = false;
     enableNushellIntegration = true;
     keys = [ "id_ed25519" ];
   };
