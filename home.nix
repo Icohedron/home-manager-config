@@ -86,7 +86,7 @@
     jq # JSON processor
 
     # --- Helper Scripts ---
-    (pkgs.writeShellScriptBin "bwrap-sandbox" ''
+    (pkgs.writeShellScriptBin "bwrap-shell" ''
       # Launch a sandboxed shell via bubblewrap.
       # Usage: bwrap-sandbox [--offline|--no-network] [directory]
       # Defaults to the current working directory.
@@ -143,6 +143,72 @@
         --die-with-parent \
         "''${EXTRA_ARGS[@]}" \
         -- ${pkgs.bash}/bin/bash
+    '')
+
+    (pkgs.writeShellScriptBin "pi-sandbox" ''
+      # Launch pi inside a tightly sandboxed bubblewrap container.
+      # Usage: pi-sandbox [--offline|--no-network] [directory] [-- pi-args...]
+      # Only the working directory and ~/.pi are writable.
+      EXTRA_ARGS=()
+      PI_ARGS=()
+      WORK_DIR=""
+      PASSTHROUGH=0
+
+      if [ ! -d "$HOME/.pi" ]; then
+        mkdir -p "$HOME/.pi"
+      fi
+
+      for arg in "$@"; do
+        if [ "$PASSTHROUGH" -eq 1 ]; then
+          PI_ARGS+=("$arg")
+          continue
+        fi
+        case "$arg" in
+          --)
+            PASSTHROUGH=1
+            ;;
+          --offline|--no-network)
+            EXTRA_ARGS+=(--unshare-net)
+            ;;
+          *)
+            WORK_DIR="$arg"
+            ;;
+        esac
+      done
+
+      WORK_DIR="''${WORK_DIR:-$(pwd)}"
+      WORK_DIR="$(realpath "$WORK_DIR")"
+
+      exec bwrap \
+        --ro-bind / / \
+        --ro-bind /dev/null /usr/bin/distrobox-host-exec \
+        --ro-bind /dev/null /usr/bin/distrobox-export \
+        --ro-bind /dev/null /usr/bin/host-spawn \
+        --ro-bind ${pkgs.emptyFile} /etc/profile.d/distrobox_profile.sh \
+        --tmpfs /run/host \
+        --proc /proc \
+        --dev /dev \
+        --tmpfs /tmp \
+        --unshare-pid \
+        --unshare-ipc \
+        --bind "$HOME/.pi" "$HOME/.pi" \
+        --bind "$WORK_DIR" "$WORK_DIR" \
+        --ro-bind "$HOME/.config" "$HOME/.config" \
+        --ro-bind "$HOME/.cache" "$HOME/.cache" \
+        --ro-bind "$HOME/.local" "$HOME/.local" \
+        --ro-bind "$HOME/.keychain" "$HOME/.keychain" \
+        --ro-bind "$SSH_AUTH_SOCK" "$SSH_AUTH_SOCK" \
+        --setenv HOME "$HOME" \
+        --setenv PATH "$PATH" \
+        --setenv SSH_AUTH_SOCK "$SSH_AUTH_SOCK" \
+        --setenv SANDBOX "1" \
+        --unsetenv DISPLAY \
+        --unsetenv WAYLAND_DISPLAY \
+        --unsetenv DBUS_SESSION_BUS_ADDRESS \
+        --chdir "$WORK_DIR" \
+        --die-with-parent \
+        "''${EXTRA_ARGS[@]}" \
+        -- pi "''${PI_ARGS[@]}"
     '')
 
     # --- Presentations & Misc ---
