@@ -93,6 +93,10 @@
       EXTRA_ARGS=()
       WORK_DIR=""
 
+      if [ ! -d "$HOME/.pi" ]; then
+        mkdir "$HOME/.pi"
+      fi
+
       for arg in "$@"; do
         case "$arg" in
           --offline|--no-network)
@@ -114,7 +118,7 @@
         --ro-bind /dev/null /usr/bin/host-spawn \
         --ro-bind ${pkgs.emptyFile} /etc/profile.d/distrobox_profile.sh \
         --tmpfs /run/host \
-        --bind ~/.pi ~/.pi \
+        --bind "$HOME/.pi" "$HOME/.pi" \
         --proc /proc \
         --dev /dev \
         --tmpfs /tmp \
