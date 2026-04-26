@@ -85,6 +85,7 @@
     smartcat # Pipe text to LLMs from the command line
     nixfmt # Nix code formatter
     jq # JSON processor
+    glow # Markdown renderer for the CLI
 
     # --- Helper Scripts ---
     (pkgs.writeShellScriptBin "bwrap-shell" ''
@@ -330,7 +331,7 @@
   
   xdg.configFile."smartcat/.api_configs.toml".text = ''
     [openai]
-    api_key_command = "echo $OPENAI_API_KEY"
+    api_key_command = "echo $OPENAI_TOKEN"
     url = "http://127.0.0.1:4141/v1/chat/completions"
     default_model = "claude-opus-4.6"
   '';
@@ -633,6 +634,7 @@
         "pi-btw@0.3.7"
         "@victor-software-house/pi-openai-proxy@4.9.3"
         "@ifi/oh-pi-prompts@0.4.4"
+        "@tmustier/pi-files-widget@0.1.20"
       ];
 
       # npm wrapper — redirects global prefix to writable ~/.pi/npm
