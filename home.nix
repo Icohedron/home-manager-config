@@ -82,6 +82,7 @@
     nil # An LSP for Nix
     opencode # Agentic coding assistant
     pi-coding-agent # Agentic coding assistant
+    smartcat # Pipe text to LLMs from the command line
     nixfmt # Nix code formatter
     jq # JSON processor
 
@@ -322,6 +323,43 @@
   programs.gh.enable = true; # GitHub CLI
   programs.gitui.enable = true; # Terminal UI for git
   programs.delta.enable = true; # A better diff and pager for git
+
+  # -------------------------------------------------------------------------
+  # Smartcat Configuration
+  # -------------------------------------------------------------------------
+  
+  xdg.configFile."smartcat/.api_configs.toml".text = ''
+    [openai]
+    api_key_command = "echo $OPENAI_API_KEY"
+    url = "http://127.0.0.1:4141/v1/chat/completions"
+    default_model = "claude-opus-4.6"
+  '';
+
+  xdg.configFile."smartcat/prompts.toml".text = ''
+    [default]
+    api = "openai"
+    char_limit = 65536
+
+    [[default.messages]]
+    role = "system"
+    content = """\
+    You are an expert programmer and system administrator. You value code efficiency and clarity above all things. Your output will be piped directly into other CLI programs or files. Follow these rules strictly:\
+    1. Output ONLY the direct result of the task. No preamble, no summary, no sign-off.\
+    2. Never wrap output in code fences (```), markdown formatting, or any decorative markup unless the task explicitly requires generating markdown.\
+    3. Never explain your reasoning or approach unless the user explicitly asks for an explanation.\
+    4. Preserve the exact formatting, indentation style, and line endings of any input provided.\
+    5. Do not add trailing newlines beyond what the content requires.\
+    6. If the task is ambiguous, make the most reasonable interpretation and proceed rather than asking clarifying questions.\
+    7. If given code to modify, return the complete modified result, not a partial diff, unless a diff is requested.\
+    8. Treat piped stdin content as the primary data to operate on. Treat the user's prompt as the instruction for what to do with that data.\
+    9. If no input is piped and the prompt is a task, produce the requested output directly.\
+    10. Never refuse a task by restating your limitations. Attempt the task to the best of your ability.\
+    """
+
+    [empty]
+    api = "openai"
+    messages = []
+  '';
 
   # -------------------------------------------------------------------------
   # Git Configuration
@@ -606,6 +644,9 @@
       '';
 
       settings = builtins.toJSON {
+        defaultProvider = "github-copilot";
+        defaultModel = "claude-opus-4.6";
+        defaultThinkingLevel = "high";
         npmCommand = [ "${npm-wrapper}/bin/npm" ];
         packages = map (p: "npm:${p}") piPackages;
       };
