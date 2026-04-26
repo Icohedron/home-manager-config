@@ -67,6 +67,9 @@
     unzip # zip decompression
     p7zip # 7zip
 
+    # --- Sandboxing ---
+    bubblewrap # Unprivileged sandboxing tool
+
     # --- Task Runners & Process Management ---
     mask # Markdown documentation that's also command runner like Make
     mprocs # Run multiple commands show the output of each
@@ -78,8 +81,51 @@
     lldb # Debugging
     nil # An LSP for Nix
     opencode # Agentic coding assistant
+    pi-coding-agent # Agentic coding assistant
     nixfmt # Nix code formatter
     jq # JSON processor
+
+    # --- Helper Scripts ---
+    (pkgs.writeShellScriptBin "bwrap-sandbox" ''
+      # Launch a sandboxed shell via bubblewrap.
+      # Usage: bwrap-sandbox [--offline|--no-network] [directory]
+      # Defaults to the current working directory.
+      EXTRA_ARGS=()
+      WORK_DIR=""
+
+      for arg in "$@"; do
+        case "$arg" in
+          --offline|--no-network)
+            EXTRA_ARGS+=(--unshare-net)
+            ;;
+          *)
+            WORK_DIR="$arg"
+            ;;
+        esac
+      done
+
+      WORK_DIR="''${WORK_DIR:-$(pwd)}"
+      WORK_DIR="$(realpath "$WORK_DIR")"
+
+      exec bwrap \
+        --ro-bind / / \
+        --bind ~/.pi ~/.pi \
+        --proc /proc \
+        --dev /dev \
+        --tmpfs /tmp \
+        --bind "$HOME/.keychain" "$HOME/.keychain" \
+        --bind "$HOME/.local/share" "$HOME/.local/share" \
+        --bind "$HOME/.cache" "$HOME/.cache" \
+        --bind "$HOME/.config" "$HOME/.config" \
+        --bind "$WORK_DIR" "$WORK_DIR" \
+        --setenv HOME "$HOME" \
+        --setenv PATH "$PATH" \
+        --setenv SANDBOX "1" \
+        --chdir "$WORK_DIR" \
+        --die-with-parent \
+        "''${EXTRA_ARGS[@]}" \
+        -- ${pkgs.bash}/bin/bash
+    '')
 
     # --- Presentations & Misc ---
     presenterm # Presentations written in Markdown, rendered in-terminal
@@ -121,7 +167,16 @@
   };
 
   programs.carapace.enable = true;
-  programs.starship.enable = true;
+  programs.starship = {
+    enable = true;
+    settings = {
+      env_var.SANDBOX = {
+        style = "bold red";
+        variable = "SANDBOX";
+        format = "[\\[sandbox\\] ]($style)";
+      };
+    };
+  };
 
   # -------------------------------------------------------------------------
   # CLI Tools & Utilities
@@ -147,7 +202,6 @@
   xdg.configFile."zellij/config.kdl".text = ''
     show_startup_tips false
     mouse_mode true
-    default_shell "nu"
 
     keybinds {
         shared_except "locked" {
