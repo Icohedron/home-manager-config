@@ -92,23 +92,28 @@
     # --- Helper Scripts ---
     (pkgs.writeShellScriptBin "pi-sandbox" ''
       # Launch pi inside a tightly sandboxed bubblewrap container.
-      # Usage: pi-sandbox [directory] [pi-args...]
-      # Only the working directory and ~/.pi are writable.
+      # Usage: pi-sandbox [paths...] [-- pi-args...]
+      # The current directory is always the working directory.
+      # Additional paths are bind-mounted read-write.
+      # Arguments after -- are forwarded to pi.
+      BIND_ARGS=()
       PI_ARGS=()
-      WORK_DIR=""
+      PASSTHROUGH=0
 
       mkdir -p "$HOME/.pi"
 
       for arg in "$@"; do
-        if [ -z "$WORK_DIR" ] && [ -d "$arg" ]; then
-          WORK_DIR="$arg"
-        else
+        if [ "$PASSTHROUGH" -eq 1 ]; then
           PI_ARGS+=("$arg")
+        elif [ "$arg" = "--" ]; then
+          PASSTHROUGH=1
+        else
+          resolved=$(realpath "$arg")
+          BIND_ARGS+=(--bind "$resolved" "$resolved")
         fi
       done
 
-      WORK_DIR="''${WORK_DIR:-$(pwd)}"
-      WORK_DIR="$(realpath "$WORK_DIR")"
+      WORK_DIR="$(realpath "$(pwd)")"
 
       # Build a minimal PATH: nix profile, pi npm binaries, and system essentials
       SANDBOX_PATH="$HOME/.pi/agent/bin:$HOME/.nix-profile/bin:$HOME/.pi/npm/bin:/nix/var/nix/profiles/default/bin:/usr/bin"
@@ -161,6 +166,7 @@
         --ro-bind "$HOME/.nix-profile/bin" "$HOME/.nix-profile/bin" \
         --bind "$HOME/.pi" "$HOME/.pi" \
         --bind "$WORK_DIR" "$WORK_DIR" \
+        "''${BIND_ARGS[@]}" \
         --setenv HOME "$HOME" \
         "''${DIRENV_ARGS[@]}" \
         --setenv PATH "$SANDBOX_PATH" \
