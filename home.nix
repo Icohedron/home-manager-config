@@ -81,47 +81,58 @@
     lldb # Debugging
     nil # An LSP for Nix
     opencode # Agentic coding assistant
-    pi-coding-agent # Agentic coding assistant
     smartcat # Pipe text to LLMs from the command line
     nixfmt # Nix code formatter
     jq # JSON processor
     glow # Markdown renderer for the CLI
+    pi-coding-agent # Agentic coding assistant
+    nodejs # JavaScript
+    bun # JavaScript runtime
 
     # --- Helper Scripts ---
     (pkgs.writeShellScriptBin "pi-sandbox" ''
       # Launch pi inside a tightly sandboxed bubblewrap container.
-      # Usage: pi-sandbox [--offline|--no-network] [directory] [-- pi-args...]
+      # Usage: pi-sandbox [directory] [pi-args...]
       # Only the working directory and ~/.pi are writable.
-      EXTRA_ARGS=()
       PI_ARGS=()
       WORK_DIR=""
-      PASSTHROUGH=0
 
       mkdir -p "$HOME/.pi"
 
       for arg in "$@"; do
-        if [ "$PASSTHROUGH" -eq 1 ]; then
+        if [ -z "$WORK_DIR" ] && [ -d "$arg" ]; then
+          WORK_DIR="$arg"
+        else
           PI_ARGS+=("$arg")
-          continue
         fi
-        case "$arg" in
-          --)
-            PASSTHROUGH=1
-            ;;
-          --offline|--no-network)
-            EXTRA_ARGS+=(--unshare-net)
-            ;;
-          *)
-            WORK_DIR="$arg"
-            ;;
-        esac
       done
 
       WORK_DIR="''${WORK_DIR:-$(pwd)}"
       WORK_DIR="$(realpath "$WORK_DIR")"
 
+      # Build a minimal PATH: nix profile, pi npm binaries, and system essentials
+      SANDBOX_PATH="$HOME/.pi/agent/bin:$HOME/.nix-profile/bin:$HOME/.pi/npm/bin:/nix/var/nix/profiles/default/bin:/usr/bin"
+
+      # Evaluate direnv for the target directory and inject the resulting
+      # environment into the sandbox.  `direnv exec` always starts from a
+      # clean baseline, so it works regardless of whether the parent shell
+      # already loaded the .envrc.
+      DIRENV_ARGS=()
+      direnv_json=$(direnv exec "$WORK_DIR" env -0 2>/dev/null | tr '\0' '\n' || true)
+      if [ -n "$direnv_json" ]; then
+        while IFS='=' read -r key value; do
+          [ -z "$key" ] && continue
+          if [ "$key" = "PATH" ]; then
+            SANDBOX_PATH="$value:$SANDBOX_PATH"
+          else
+            DIRENV_ARGS+=(--setenv "$key" "$value")
+          fi
+        done <<< "$direnv_json"
+      fi
+
       exec bwrap \
         --new-session \
+        --cap-drop ALL \
         --ro-bind /dev/null /usr/bin/distrobox-host-exec \
         --ro-bind /dev/null /usr/bin/distrobox-export \
         --ro-bind /dev/null /usr/bin/host-spawn \
@@ -129,13 +140,20 @@
         --ro-bind /usr /usr \
         --symlink usr/bin /bin \
         --symlink usr/sbin /sbin \
-        --ro-bind /etc /etc \
+        --ro-bind /etc/resolv.conf /etc/resolv.conf \
+        --ro-bind /etc/hosts /etc/hosts \
+        --ro-bind /etc/passwd /etc/passwd \
+        --ro-bind /etc/group /etc/group \
+        --ro-bind /etc/nsswitch.conf /etc/nsswitch.conf \
+        --ro-bind-try /etc/ssl /etc/ssl \
+        --ro-bind-try /etc/pki /etc/pki \
         --ro-bind /lib /lib \
         --ro-bind-try /lib64 /lib64 \
         --ro-bind-try /lib32 /lib32 \
         --tmpfs /run/host \
         --proc /proc \
         --dev /dev \
+        --tmpfs /dev/shm \
         --tmpfs /tmp \
         --unshare-pid \
         --unshare-uts \
@@ -144,15 +162,15 @@
         --bind "$HOME/.pi" "$HOME/.pi" \
         --bind "$WORK_DIR" "$WORK_DIR" \
         --setenv HOME "$HOME" \
-        --setenv PATH "$PATH" \
-        --setenv SSH_AUTH_SOCK "$SSH_AUTH_SOCK" \
+        "''${DIRENV_ARGS[@]}" \
+        --setenv PATH "$SANDBOX_PATH" \
+        --ro-bind "$HOME/.config/git/config" "$HOME/.config/git/config" \
         --setenv SANDBOX "1" \
         --unsetenv DISPLAY \
         --unsetenv WAYLAND_DISPLAY \
         --unsetenv DBUS_SESSION_BUS_ADDRESS \
         --chdir "$WORK_DIR" \
         --die-with-parent \
-        "''${EXTRA_ARGS[@]}" \
         -- pi "''${PI_ARGS[@]}"
     '')
 
