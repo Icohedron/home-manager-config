@@ -88,65 +88,6 @@
     glow # Markdown renderer for the CLI
 
     # --- Helper Scripts ---
-    (pkgs.writeShellScriptBin "bwrap-shell" ''
-      # Launch a sandboxed shell via bubblewrap.
-      # Usage: bwrap-sandbox [--offline|--no-network] [directory]
-      # Defaults to the current working directory.
-      EXTRA_ARGS=()
-      WORK_DIR=""
-
-      if [ ! -d "$HOME/.pi" ]; then
-        mkdir "$HOME/.pi"
-      fi
-
-      for arg in "$@"; do
-        case "$arg" in
-          --offline|--no-network)
-            EXTRA_ARGS+=(--unshare-net)
-            ;;
-          *)
-            WORK_DIR="$arg"
-            ;;
-        esac
-      done
-
-      WORK_DIR="''${WORK_DIR:-$(pwd)}"
-      WORK_DIR="$(realpath "$WORK_DIR")"
-
-      exec bwrap \
-        --ro-bind / / \
-        --ro-bind /dev/null /usr/bin/distrobox-host-exec \
-        --ro-bind /dev/null /usr/bin/distrobox-export \
-        --ro-bind /dev/null /usr/bin/host-spawn \
-        --ro-bind ${pkgs.emptyFile} /etc/profile.d/distrobox_profile.sh \
-        --tmpfs /run/host \
-        --bind "$HOME/.pi" "$HOME/.pi" \
-        --proc /proc \
-        --dev /dev \
-        --tmpfs /tmp \
-        --unshare-pid \
-        --unshare-ipc \
-        --ro-bind "$HOME/.keychain" "$HOME/.keychain" \
-        --ro-bind "$SSH_AUTH_SOCK" "$SSH_AUTH_SOCK" \
-        --bind "$HOME/.local/share" "$HOME/.local/share" \
-        --bind "$HOME/.cache" "$HOME/.cache" \
-        --bind "$HOME/.config" "$HOME/.config" \
-        --bind "$WORK_DIR" "$WORK_DIR" \
-        --setenv HOME "$HOME" \
-        --setenv PATH "$PATH" \
-        --setenv SSH_AUTH_SOCK "$SSH_AUTH_SOCK" \
-        --setenv DISPLAY "''${DISPLAY:-}" \
-        --setenv WAYLAND_DISPLAY "''${WAYLAND_DISPLAY:-}" \
-        --setenv XAUTHORITY "''${XAUTHORITY:-}" \
-        --setenv XAUTHLOCALHOSTNAME "''${XAUTHLOCALHOSTNAME:-}" \
-        --unsetenv DBUS_SESSION_BUS_ADDRESS \
-        --setenv SANDBOX "1" \
-        --chdir "$WORK_DIR" \
-        --die-with-parent \
-        "''${EXTRA_ARGS[@]}" \
-        -- ${pkgs.bash}/bin/bash
-    '')
-
     (pkgs.writeShellScriptBin "pi-sandbox" ''
       # Launch pi inside a tightly sandboxed bubblewrap container.
       # Usage: pi-sandbox [--offline|--no-network] [directory] [-- pi-args...]
@@ -156,9 +97,7 @@
       WORK_DIR=""
       PASSTHROUGH=0
 
-      if [ ! -d "$HOME/.pi" ]; then
-        mkdir -p "$HOME/.pi"
-      fi
+      mkdir -p "$HOME/.pi"
 
       for arg in "$@"; do
         if [ "$PASSTHROUGH" -eq 1 ]; then
@@ -182,24 +121,28 @@
       WORK_DIR="$(realpath "$WORK_DIR")"
 
       exec bwrap \
-        --ro-bind / / \
+        --new-session \
         --ro-bind /dev/null /usr/bin/distrobox-host-exec \
         --ro-bind /dev/null /usr/bin/distrobox-export \
         --ro-bind /dev/null /usr/bin/host-spawn \
-        --ro-bind ${pkgs.emptyFile} /etc/profile.d/distrobox_profile.sh \
+        --ro-bind /nix /nix \
+        --ro-bind /usr /usr \
+        --symlink usr/bin /bin \
+        --symlink usr/sbin /sbin \
+        --ro-bind /etc /etc \
+        --ro-bind /lib /lib \
+        --ro-bind-try /lib64 /lib64 \
+        --ro-bind-try /lib32 /lib32 \
         --tmpfs /run/host \
         --proc /proc \
         --dev /dev \
         --tmpfs /tmp \
         --unshare-pid \
+        --unshare-uts \
         --unshare-ipc \
+        --ro-bind "$HOME/.nix-profile/bin" "$HOME/.nix-profile/bin" \
         --bind "$HOME/.pi" "$HOME/.pi" \
         --bind "$WORK_DIR" "$WORK_DIR" \
-        --ro-bind "$HOME/.config" "$HOME/.config" \
-        --ro-bind "$HOME/.cache" "$HOME/.cache" \
-        --ro-bind "$HOME/.local" "$HOME/.local" \
-        --ro-bind "$HOME/.keychain" "$HOME/.keychain" \
-        --ro-bind "$SSH_AUTH_SOCK" "$SSH_AUTH_SOCK" \
         --setenv HOME "$HOME" \
         --setenv PATH "$PATH" \
         --setenv SSH_AUTH_SOCK "$SSH_AUTH_SOCK" \
