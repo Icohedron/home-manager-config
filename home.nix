@@ -60,6 +60,7 @@
     dua # Interactive disk-use analyzer
     file # Show file type
     tree # Display directory trees
+    which # Which?
     (if useWayland then wl-clipboard else xsel) # Clipboard
 
     # --- Archives & Compression ---
