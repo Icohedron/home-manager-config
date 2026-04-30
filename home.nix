@@ -600,6 +600,8 @@
     let
       piPackages = [ # pi-pkgs
         "pi-btw@0.3.7"
+        "pi-minions@0.17.0"
+        "pi-permission-system@0.4.6"
         "@victor-software-house/pi-openai-proxy@4.9.3"
         "@ifi/oh-pi-prompts@0.4.4"
         "@tmustier/pi-files-widget@0.1.20"
@@ -630,9 +632,19 @@
         "$pi_dir/settings.json"
       $DRY_RUN_CMD chmod 644 "$pi_dir/settings.json"
 
-      # Install declared packages
+      # Install declared packages (skip if already at the correct version)
       ${lib.concatMapStringsSep "\n      " (pkg:
-        "$DRY_RUN_CMD $npm install -g ${pkg}"
+        let
+          # Split "name@version" — handles "@scope/name@version" too
+          parts = builtins.match "(.+)@([^@]+)" pkg;
+          name = builtins.elemAt parts 0;
+          version = builtins.elemAt parts 1;
+        in
+        ''if [ "$($npm ls -g ${name} --depth=0 --json 2>/dev/null | ${pkgs.jq}/bin/jq -r '.dependencies."${name}".version // empty')" = "${version}" ]; then
+            echo "${pkg} already installed, skipping"
+          else
+            $DRY_RUN_CMD $npm install -g ${pkg}
+          fi''
       ) piPackages}
 
       # Uninstall packages not in the declared list
@@ -653,6 +665,90 @@
           $DRY_RUN_CMD $npm uninstall -g "$name"
         fi
       done
+    '';
+
+  # pi-permission-system config & policy — copied (not symlinked) so the
+  # extension can still write to the files.  Reset on every switch.
+  home.activation.piPermissions =
+    let
+      extensionConfig = builtins.toJSON {
+        debugLog = false;
+        permissionReviewLog = true;
+        yoloMode = false;
+      };
+
+      permissionsPolicy = builtins.toJSON {
+        defaultPolicy = {
+          tools = "allow";
+          bash = "allow";
+          mcp = "allow";
+          skills = "allow";
+          special = "allow";
+        };
+        bash = {
+          # ── HTTP clients ──────────────────────────────────────
+          "*curl *" = "ask";
+          "*wget *" = "ask";
+
+          # ── Remote shells & file transfer ─────────────────────
+          "*ssh *" = "ask";
+          "*scp *" = "ask";
+          "*sftp *" = "ask";
+          "*rsync *" = "ask";
+          "*ftp *" = "ask";
+
+          # ── Raw sockets / tunnels ─────────────────────────────
+          "nc *" = "ask";
+          "*netcat *" = "ask";
+          "*ncat *" = "ask";
+          "*socat *" = "ask";
+          "*telnet *" = "ask";
+          "*/dev/tcp/*" = "ask";
+          "*/dev/udp/*" = "ask";
+
+          # ── Git push (sends code to remotes) ──────────────────
+          "git push*" = "ask";
+          "git remote add*" = "ask";
+          "git remote set-url*" = "ask";
+
+          # ── Container / cloud pushes ──────────────────────────
+          "*docker push*" = "ask";
+          "*podman push*" = "ask";
+
+          # ── Mail ──────────────────────────────────────────────
+          "*sendmail *" = "ask";
+          "*mailx *" = "ask";
+
+          # ── Tunnel / expose services ──────────────────────────
+          "*ngrok*" = "ask";
+
+          # ── Inline interpreters opening network ────────────────
+          "*python*http.server*" = "ask";
+          "*python*SimpleHTTPServer*" = "ask";
+
+          # ── System package managers ──
+          "nix *" = "ask";
+          "*nix-env *" = "ask";
+          "*nix-build *" = "ask";
+          "*nix-shell *" = "ask";
+          "*nix-store *" = "ask";
+          "*nixos-rebuild *" = "ask";
+          "*home-manager *" = "ask";
+        };
+      };
+    in
+    lib.hm.dag.entryAfter [ "writeBoundary" "piSettings" ] ''
+      pi_dir="$HOME/.pi/agent"
+      ext_dir="$HOME/.pi/npm/lib/node_modules/pi-permission-system"
+      $DRY_RUN_CMD mkdir -p "$ext_dir"
+      $DRY_RUN_CMD cp --remove-destination \
+        ${pkgs.writeText "pi-permission-system-config.json" extensionConfig} \
+        "$ext_dir/config.json"
+      $DRY_RUN_CMD chmod 644 "$ext_dir/config.json"
+      $DRY_RUN_CMD cp --remove-destination \
+        ${pkgs.writeText "pi-permissions.jsonc" permissionsPolicy} \
+        "$pi_dir/pi-permissions.jsonc"
+      $DRY_RUN_CMD chmod 644 "$pi_dir/pi-permissions.jsonc"
     '';
 
   # Extensions — symlinked from the Nix store (read-only is fine).
