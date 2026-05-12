@@ -331,7 +331,7 @@
   '';
 
   # -------------------------------------------------------------------------
-  # Git Configuration
+  # Version Control System Configuration
   # -------------------------------------------------------------------------
   programs.git = {
     enable = true;
@@ -352,6 +352,24 @@
       gpg.format = "ssh";
     };
     signing.format = null;
+  };
+
+  programs.jujutsu = {
+    enable = true;
+    settings = {
+      user = {
+        name = gitUsername;
+        email = gitEmail;
+      };
+      signing = {
+        sign-all = true;
+        backend = "ssh";
+        key = "~/.ssh/id_ed25519.pub";
+      };
+      ui = {
+        editor = "hx";
+      };
+    };
   };
 
   # -------------------------------------------------------------------------
