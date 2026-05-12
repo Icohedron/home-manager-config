@@ -617,12 +617,12 @@
   home.activation.piSettings =
     let
       piPackages = [ # pi-pkgs
-        "pi-btw@0.3.7"
+        "pi-btw@0.4.0"
         "pi-minions@0.17.0"
-        "pi-permission-system@0.4.6"
-        "@victor-software-house/pi-openai-proxy@4.9.3"
-        "@ifi/oh-pi-prompts@0.4.4"
-        "@tmustier/pi-files-widget@0.1.20"
+        "pi-permission-system@0.4.9"
+        "@victor-software-house/pi-openai-proxy@4.9.5"
+        "@ifi/oh-pi-prompts@0.5.1"
+        "@tmustier/pi-files-widget@0.1.21"
       ];
 
       # npm wrapper — redirects global prefix to writable ~/.pi/npm
