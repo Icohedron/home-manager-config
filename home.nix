@@ -89,6 +89,7 @@
     pi-coding-agent # Agentic coding assistant
     nodejs # JavaScript
     bun # JavaScript runtime
+    worktrunk # git worktrees
 
     # --- Helper Scripts ---
     (pkgs.writeShellScriptBin "pi-sandbox" ''
@@ -207,6 +208,9 @@
     if [[ -z "$SANDBOX" ]]; then
       eval "$(SHELL=bash ${pkgs.keychain}/bin/keychain --eval --quiet id_ed25519)"
     fi
+
+    # Worktrunk shell integration
+    if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init bash)"; fi
   '';
 
   programs.nushell = {
@@ -226,7 +230,9 @@
       in
       lib.concatMapStringsSep "\n" (
         cmplt: "source ${completion_dir}/${cmplt}/${cmplt}-completions.nu"
-      ) completions;
+      ) completions
+      + "\n\n# Worktrunk shell integration\n"
+      + ''if (which wt | is-not-empty) { mkdir ($nu.default-config-dir | path join vendor/autoload); wt config shell init nu | save --force ($nu.default-config-dir | path join vendor/autoload/wt.nu) }'';
   };
 
   programs.carapace.enable = true;
@@ -795,9 +801,4 @@
     enableDefaultConfig = false; # Silence warning
     matchBlocks."*".addKeysToAgent = "yes";
   };
-
-  # -------------------------------------------------------------------------
-  # Browser
-  # -------------------------------------------------------------------------
-  programs.firefox.enable = true;
 }
