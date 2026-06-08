@@ -799,6 +799,6 @@
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false; # Silence warning
-    matchBlocks."*".addKeysToAgent = "yes";
+    settings."*".addKeysToAgent = "yes";
   };
 }
