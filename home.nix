@@ -98,6 +98,8 @@
       # The current directory is always the working directory.
       # Additional paths are bind-mounted read-write.
       # Arguments after -- are forwarded to pi.
+      # GPU device nodes and the host X11/Wayland display are bound in when
+      # present, so GUI applications can render with hardware acceleration.
       BIND_ARGS=()
       PI_ARGS=()
       PASSTHROUGH=0
@@ -137,6 +139,52 @@
         done <<< "$direnv_json"
       fi
 
+      # ---------------------------------------------------------------------
+      # GPU + GUI display passthrough
+      #
+      # Bind the GPU device nodes and the host display sockets so GUI
+      # applications (e.g. DX12/Vulkan apps under Proton) can render with
+      # hardware acceleration.  Every bind is guarded so it is silently
+      # skipped when the device/socket is absent (e.g. NVIDIA nodes on an AMD
+      # box, or no Wayland socket on an X11-only session).
+      # ---------------------------------------------------------------------
+      GUI_ARGS=()
+
+      # GPU device nodes: the DRI card/render nodes (Intel/AMD/Nouveau and the
+      # NVIDIA render node) plus the NVIDIA proprietary driver nodes.
+      for gpu_dev in /dev/dri \
+                     /dev/nvidia0 /dev/nvidia1 /dev/nvidiactl \
+                     /dev/nvidia-modeset /dev/nvidia-uvm /dev/nvidia-uvm-tools; do
+        [ -e "$gpu_dev" ] && GUI_ARGS+=(--dev-bind "$gpu_dev" "$gpu_dev")
+      done
+
+      # NixOS userspace GPU drivers (no-op on generic Linux hosts, where the
+      # drivers live under the already-bound /usr and /lib).
+      [ -d /run/opengl-driver ] && GUI_ARGS+=(--ro-bind /run/opengl-driver /run/opengl-driver)
+      [ -d /run/opengl-driver-32 ] && GUI_ARGS+=(--ro-bind /run/opengl-driver-32 /run/opengl-driver-32)
+
+      # Vulkan ICD manifests that may live outside /usr.
+      [ -d /etc/vulkan ] && GUI_ARGS+=(--ro-bind /etc/vulkan /etc/vulkan)
+
+      # X11 display: bind the socket dir (over the /tmp tmpfs) and forward the
+      # cookie so the client can authenticate.
+      if [ -n "''${DISPLAY:-}" ] && [ -d /tmp/.X11-unix ]; then
+        GUI_ARGS+=(--ro-bind /tmp/.X11-unix /tmp/.X11-unix --setenv DISPLAY "$DISPLAY")
+        if [ -n "''${XAUTHORITY:-}" ] && [ -f "$XAUTHORITY" ]; then
+          GUI_ARGS+=(--ro-bind "$XAUTHORITY" "$XAUTHORITY" --setenv XAUTHORITY "$XAUTHORITY")
+        fi
+      fi
+
+      # Wayland display: bind just the compositor socket inside the runtime dir.
+      if [ -n "''${WAYLAND_DISPLAY:-}" ] && [ -n "''${XDG_RUNTIME_DIR:-}" ]; then
+        wl_sock="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+        if [ -e "$wl_sock" ]; then
+          GUI_ARGS+=(--ro-bind "$wl_sock" "$wl_sock" \
+            --setenv WAYLAND_DISPLAY "$WAYLAND_DISPLAY" \
+            --setenv XDG_RUNTIME_DIR "$XDG_RUNTIME_DIR")
+        fi
+      fi
+
       exec bwrap \
         --new-session \
         --cap-drop ALL \
@@ -160,6 +208,7 @@
         --tmpfs /run/host \
         --proc /proc \
         --dev /dev \
+        --ro-bind-try /sys /sys \
         --tmpfs /dev/shm \
         --tmpfs /tmp \
         --unshare-pid \
@@ -174,8 +223,7 @@
         --setenv PATH "$SANDBOX_PATH" \
         --ro-bind "$HOME/.config/git/config" "$HOME/.config/git/config" \
         --setenv SANDBOX "1" \
-        --unsetenv DISPLAY \
-        --unsetenv WAYLAND_DISPLAY \
+        "''${GUI_ARGS[@]}" \
         --unsetenv DBUS_SESSION_BUS_ADDRESS \
         --chdir "$WORK_DIR" \
         --die-with-parent \
