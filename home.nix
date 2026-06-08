@@ -624,8 +624,8 @@
     let
       piPackages = [ # pi-pkgs
         "pi-btw@0.4.0"
-        "pi-minions@0.17.0"
-        "pi-permission-system@0.4.9"
+        "pi-minions@0.18.0"
+        "pi-permission-system@0.7.0"
         "@victor-software-house/pi-openai-proxy@4.9.5"
         "@ifi/oh-pi-prompts@0.5.1"
         "@tmustier/pi-files-widget@0.1.21"
