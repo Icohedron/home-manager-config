@@ -50,6 +50,17 @@ To prevent accidentally committing your personal details, we highly recommend te
 git update-index --assume-unchanged users.nix
 ```
 
+> [!IMPORTANT]
+> Because `--assume-unchanged` hides edits from git, Nix's evaluation cache
+> won't notice when you change `users.nix` and may keep applying a stale
+> configuration (for example, `nix flake check` failing on an old username).
+> After editing `users.nix`, run your Nix command with `--no-eval-cache` to
+> bypass the stale cache:
+>
+> ```bash
+> nix flake check --no-eval-cache
+> ```
+
 *Note: If your system's username matches the `username` in `users.nix`, Home Manager will automatically find and apply your configuration.*
 
 ### 4. Apply Configuration
