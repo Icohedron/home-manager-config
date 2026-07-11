@@ -69,7 +69,7 @@
     p7zip # 7zip
 
     # --- Sandboxing ---
-    bubblewrap # Unprivileged sandboxing tool
+    nono # Kernel-enforced (Landlock/Seatbelt) capability-based sandbox
 
     # --- Task Runners & Process Management ---
     mask # Markdown documentation that's also command runner like Make
@@ -81,152 +81,12 @@
     valgrind-light # Debugging and profiling
     lldb # Debugging
     nil # An LSP for Nix
-    opencode # Coding agent
     graphify # Knowledge graph generator for AI
     smartcat # Pipe text to LLMs from the command line
     nixfmt # Nix code formatter
     jq # JSON processor
     glow # Markdown renderer for the CLI
     worktrunk # git worktrees
-
-    # --- Helper Scripts ---
-    (pkgs.writeShellScriptBin "pi-sandbox" ''
-      # Launch pi inside a tightly sandboxed bubblewrap container.
-      # Usage: pi-sandbox [paths...] [-- pi-args...]
-      # The current directory is always the working directory.
-      # Additional paths are bind-mounted read-write.
-      # Arguments after -- are forwarded to pi.
-      # GPU device nodes and the host X11/Wayland display are bound in when
-      # present, so GUI applications can render with hardware acceleration.
-      BIND_ARGS=()
-      PI_ARGS=()
-      PASSTHROUGH=0
-
-      mkdir -p "$HOME/.pi"
-
-      for arg in "$@"; do
-        if [ "$PASSTHROUGH" -eq 1 ]; then
-          PI_ARGS+=("$arg")
-        elif [ "$arg" = "--" ]; then
-          PASSTHROUGH=1
-        else
-          resolved=$(realpath "$arg")
-          BIND_ARGS+=(--bind "$resolved" "$resolved")
-        fi
-      done
-
-      WORK_DIR="$(realpath "$(pwd)")"
-
-      # Build a minimal PATH: nix profile, pi npm binaries, and system essentials
-      SANDBOX_PATH="$HOME/.pi/agent/bin:$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/bin"
-
-      # Evaluate direnv for the target directory and inject the resulting
-      # environment into the sandbox.  `direnv exec` always starts from a
-      # clean baseline, so it works regardless of whether the parent shell
-      # already loaded the .envrc.
-      DIRENV_ARGS=()
-      direnv_json=$(direnv exec "$WORK_DIR" env -0 2>/dev/null | tr '\0' '\n' || true)
-      if [ -n "$direnv_json" ]; then
-        while IFS='=' read -r key value; do
-          [ -z "$key" ] && continue
-          if [ "$key" = "PATH" ]; then
-            SANDBOX_PATH="$value:$SANDBOX_PATH"
-          else
-            DIRENV_ARGS+=(--setenv "$key" "$value")
-          fi
-        done <<< "$direnv_json"
-      fi
-
-      # ---------------------------------------------------------------------
-      # GPU + GUI display passthrough
-      #
-      # Bind the GPU device nodes and the host display sockets so GUI
-      # applications (e.g. DX12/Vulkan apps under Proton) can render with
-      # hardware acceleration.  Every bind is guarded so it is silently
-      # skipped when the device/socket is absent (e.g. NVIDIA nodes on an AMD
-      # box, or no Wayland socket on an X11-only session).
-      # ---------------------------------------------------------------------
-      GUI_ARGS=()
-
-      # GPU device nodes: the DRI card/render nodes (Intel/AMD/Nouveau and the
-      # NVIDIA render node) plus the NVIDIA proprietary driver nodes.
-      for gpu_dev in /dev/dri \
-                     /dev/nvidia0 /dev/nvidia1 /dev/nvidiactl \
-                     /dev/nvidia-modeset /dev/nvidia-uvm /dev/nvidia-uvm-tools; do
-        [ -e "$gpu_dev" ] && GUI_ARGS+=(--dev-bind "$gpu_dev" "$gpu_dev")
-      done
-
-      # NixOS userspace GPU drivers (no-op on generic Linux hosts, where the
-      # drivers live under the already-bound /usr and /lib).
-      [ -d /run/opengl-driver ] && GUI_ARGS+=(--ro-bind /run/opengl-driver /run/opengl-driver)
-      [ -d /run/opengl-driver-32 ] && GUI_ARGS+=(--ro-bind /run/opengl-driver-32 /run/opengl-driver-32)
-
-      # Vulkan ICD manifests that may live outside /usr.
-      [ -d /etc/vulkan ] && GUI_ARGS+=(--ro-bind /etc/vulkan /etc/vulkan)
-
-      # X11 display: bind the socket dir (over the /tmp tmpfs) and forward the
-      # cookie so the client can authenticate.
-      if [ -n "''${DISPLAY:-}" ] && [ -d /tmp/.X11-unix ]; then
-        GUI_ARGS+=(--ro-bind /tmp/.X11-unix /tmp/.X11-unix --setenv DISPLAY "$DISPLAY")
-        if [ -n "''${XAUTHORITY:-}" ] && [ -f "$XAUTHORITY" ]; then
-          GUI_ARGS+=(--ro-bind "$XAUTHORITY" "$XAUTHORITY" --setenv XAUTHORITY "$XAUTHORITY")
-        fi
-      fi
-
-      # Wayland display: bind just the compositor socket inside the runtime dir.
-      if [ -n "''${WAYLAND_DISPLAY:-}" ] && [ -n "''${XDG_RUNTIME_DIR:-}" ]; then
-        wl_sock="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
-        if [ -e "$wl_sock" ]; then
-          GUI_ARGS+=(--ro-bind "$wl_sock" "$wl_sock" \
-            --setenv WAYLAND_DISPLAY "$WAYLAND_DISPLAY" \
-            --setenv XDG_RUNTIME_DIR "$XDG_RUNTIME_DIR")
-        fi
-      fi
-
-      exec bwrap \
-        --new-session \
-        --cap-drop ALL \
-        --ro-bind /dev/null /usr/bin/distrobox-host-exec \
-        --ro-bind /dev/null /usr/bin/distrobox-export \
-        --ro-bind /dev/null /usr/bin/host-spawn \
-        --ro-bind /nix /nix \
-        --ro-bind /usr /usr \
-        --symlink usr/bin /bin \
-        --symlink usr/sbin /sbin \
-        --ro-bind /etc/resolv.conf /etc/resolv.conf \
-        --ro-bind /etc/hosts /etc/hosts \
-        --ro-bind /etc/passwd /etc/passwd \
-        --ro-bind /etc/group /etc/group \
-        --ro-bind /etc/nsswitch.conf /etc/nsswitch.conf \
-        --ro-bind-try /etc/ssl /etc/ssl \
-        --ro-bind-try /etc/pki /etc/pki \
-        --ro-bind /lib /lib \
-        --ro-bind-try /lib64 /lib64 \
-        --ro-bind-try /lib32 /lib32 \
-        --tmpfs /run/host \
-        --proc /proc \
-        --dev /dev \
-        --ro-bind-try /sys /sys \
-        --tmpfs /dev/shm \
-        --tmpfs /tmp \
-        --unshare-pid \
-        --unshare-uts \
-        --unshare-ipc \
-        --ro-bind "$HOME/.nix-profile/bin" "$HOME/.nix-profile/bin" \
-        --bind "$HOME/.pi" "$HOME/.pi" \
-        --bind "$WORK_DIR" "$WORK_DIR" \
-        "''${BIND_ARGS[@]}" \
-        --setenv HOME "$HOME" \
-        "''${DIRENV_ARGS[@]}" \
-        --setenv PATH "$SANDBOX_PATH" \
-        --ro-bind "$HOME/.config/git/config" "$HOME/.config/git/config" \
-        --setenv SANDBOX "1" \
-        "''${GUI_ARGS[@]}" \
-        --unsetenv DBUS_SESSION_BUS_ADDRESS \
-        --chdir "$WORK_DIR" \
-        --die-with-parent \
-        -- pi "''${PI_ARGS[@]}"
-    '')
 
     # --- Presentations & Misc ---
     presenterm # Presentations written in Markdown, rendered in-terminal
@@ -627,118 +487,11 @@
 
   programs.pi-coding-agent = {
     enable = true;
-    extraPackages = with pkgs; [
-      nodejs
-      bun
-    ];
+    extraPackages = [];
     settings = {
-      defaultProvider = "github-copilot";
-      defaultModel = "claude-opus-4.8";
-      defaultThinkingLevel = "high";
-      packages = [
-        "npm:pi-btw"
-        "npm:pi-minions"
-        "npm:pi-permission-system"
-        "npm:@ifi/oh-pi-prompts"
-        "npm:@tmustier/pi-files-widget"
-      ];
+      packages = [];
     };
   };
-
-  # pi-permission-system config & policy — copied (not symlinked) so the
-  # extension can still write to the files.  Reset on every switch.
-  home.activation.piPermissions =
-    let
-      extensionConfig = builtins.toJSON {
-        debugLog = false;
-        permissionReviewLog = true;
-        yoloMode = false;
-      };
-
-      permissionsPolicy = builtins.toJSON {
-        defaultPolicy = {
-          tools = "allow";
-          bash = "allow";
-          mcp = "allow";
-          skills = "allow";
-          special = "allow";
-        };
-        bash = {
-          # ── HTTP clients ──────────────────────────────────────
-          "*curl *" = "ask";
-          "*wget *" = "ask";
-
-          # ── Remote shells & file transfer ─────────────────────
-          "*ssh *" = "ask";
-          "*scp *" = "ask";
-          "*sftp *" = "ask";
-          "*rsync *" = "ask";
-          "*ftp *" = "ask";
-
-          # ── Raw sockets / tunnels ─────────────────────────────
-          "nc *" = "ask";
-          "*netcat *" = "ask";
-          "*ncat *" = "ask";
-          "*socat *" = "ask";
-          "*telnet *" = "ask";
-          "*/dev/tcp/*" = "ask";
-          "*/dev/udp/*" = "ask";
-
-          # ── Git push (sends code to remotes) ──────────────────
-          "git push*" = "ask";
-          "git remote add*" = "ask";
-          "git remote set-url*" = "ask";
-
-          # ── Container / cloud pushes ──────────────────────────
-          "*docker push*" = "ask";
-          "*podman push*" = "ask";
-
-          # ── Mail ──────────────────────────────────────────────
-          "*sendmail *" = "ask";
-          "*mailx *" = "ask";
-
-          # ── Tunnel / expose services ──────────────────────────
-          "*ngrok*" = "ask";
-
-          # ── Inline interpreters opening network ────────────────
-          "*python*http.server*" = "ask";
-          "*python*SimpleHTTPServer*" = "ask";
-
-          # ── System package managers ──
-          "nix *" = "ask";
-          "*nix-env *" = "ask";
-          "*nix-build *" = "ask";
-          "*nix-shell *" = "ask";
-          "*nix-store *" = "ask";
-          "*nixos-rebuild *" = "ask";
-          "*home-manager *" = "ask";
-        };
-      };
-    in
-    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      pi_dir="$HOME/.pi/agent"
-      ext_dir="$HOME/.pi/agent/npm/node_modules/pi-permission-system"
-      $DRY_RUN_CMD mkdir -p "$ext_dir"
-      $DRY_RUN_CMD cp --remove-destination \
-        ${pkgs.writeText "pi-permission-system-config.json" extensionConfig} \
-        "$ext_dir/config.json"
-      $DRY_RUN_CMD chmod 644 "$ext_dir/config.json"
-      $DRY_RUN_CMD cp --remove-destination \
-        ${pkgs.writeText "pi-permissions.jsonc" permissionsPolicy} \
-        "$pi_dir/pi-permissions.jsonc"
-      $DRY_RUN_CMD chmod 644 "$pi_dir/pi-permissions.jsonc"
-    '';
-
-  # Extensions — symlinked from the Nix store (read-only is fine).
-  # home.file.".pi/agent/extensions/my-extension.ts".text = ''
-  #   import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-  #
-  #   export default function (pi: ExtensionAPI) {
-  #     pi.on("session_start", async (_event, ctx) => {
-  #       ctx.ui.notify("Extension loaded!", "info");
-  #     });
-  #   }
-  # '';
 
   # -------------------------------------------------------------------------
   # SSH & Services
