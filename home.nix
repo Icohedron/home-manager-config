@@ -81,14 +81,12 @@
     valgrind-light # Debugging and profiling
     lldb # Debugging
     nil # An LSP for Nix
-    opencode # Agentic coding assistant
+    opencode # Coding agent
+    graphify # Knowledge graph generator for AI
     smartcat # Pipe text to LLMs from the command line
     nixfmt # Nix code formatter
     jq # JSON processor
     glow # Markdown renderer for the CLI
-    pi-coding-agent # Agentic coding assistant
-    nodejs # JavaScript
-    bun # JavaScript runtime
     worktrunk # git worktrees
 
     # --- Helper Scripts ---
@@ -120,7 +118,7 @@
       WORK_DIR="$(realpath "$(pwd)")"
 
       # Build a minimal PATH: nix profile, pi npm binaries, and system essentials
-      SANDBOX_PATH="$HOME/.pi/agent/bin:$HOME/.nix-profile/bin:$HOME/.pi/npm/bin:/nix/var/nix/profiles/default/bin:/usr/bin"
+      SANDBOX_PATH="$HOME/.pi/agent/bin:$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/bin"
 
       # Evaluate direnv for the target directory and inject the resulting
       # environment into the sandbox.  `direnv exec` always starts from a
@@ -237,8 +235,6 @@
 
   home.sessionVariables = { };
 
-  # The npm packages for Pi can come with binaries that should be on the PATH.
-  home.sessionPath = [ "$HOME/.pi/npm/bin" ];
 
   # -------------------------------------------------------------------------
   # Shell & Shell Integration
@@ -348,43 +344,6 @@
   programs.delta.enable = true; # A better diff and pager for git
 
   # -------------------------------------------------------------------------
-  # Smartcat Configuration
-  # -------------------------------------------------------------------------
-  
-  xdg.configFile."smartcat/.api_configs.toml".text = ''
-    [openai]
-    api_key_command = "echo $OPENAI_TOKEN"
-    url = "http://127.0.0.1:4141/v1/chat/completions"
-    default_model = "claude-opus-4.6"
-  '';
-
-  xdg.configFile."smartcat/prompts.toml".text = ''
-    [default]
-    api = "openai"
-    char_limit = 65536
-
-    [[default.messages]]
-    role = "system"
-    content = """\
-    You are an expert programmer and system administrator. You value code efficiency and clarity above all things. Your output will be piped directly into other CLI programs or files. Follow these rules strictly:\
-    1. Output ONLY the direct result of the task. No preamble, no summary, no sign-off.\
-    2. Never wrap output in code fences (```), markdown formatting, or any decorative markup unless the task explicitly requires generating markdown.\
-    3. Never explain your reasoning or approach unless the user explicitly asks for an explanation.\
-    4. Preserve the exact formatting, indentation style, and line endings of any input provided.\
-    5. Do not add trailing newlines beyond what the content requires.\
-    6. If the task is ambiguous, make the most reasonable interpretation and proceed rather than asking clarifying questions.\
-    7. If given code to modify, return the complete modified result, not a partial diff, unless a diff is requested.\
-    8. Treat piped stdin content as the primary data to operate on. Treat the user's prompt as the instruction for what to do with that data.\
-    9. If no input is piped and the prompt is a task, produce the requested output directly.\
-    10. Never refuse a task by restating your limitations. Attempt the task to the best of your ability.\
-    """
-
-    [empty]
-    api = "openai"
-    messages = []
-  '';
-
-  # -------------------------------------------------------------------------
   # Version Control System Configuration
   # -------------------------------------------------------------------------
   programs.git = {
@@ -445,7 +404,7 @@
       agent = {
         default_model = {
           provider = "copilot_chat";
-          model = "claude-opus-4.6";
+          model = "claude-opus-4.8";
           enable_thinking = true;
           effort = "high";
         };
@@ -666,78 +625,25 @@
   # Pi Coding Agent
   # -------------------------------------------------------------------------
 
-  # Settings — copied (not symlinked) so pi can still write to the file.
-  # Reset to this declarative baseline on every `home-manager switch`.
-  home.activation.piSettings =
-    let
-      piPackages = [ # pi-pkgs
-        "pi-btw@0.4.0"
-        "pi-minions@0.18.0"
-        "pi-permission-system@0.7.0"
-        "@victor-software-house/pi-openai-proxy@4.9.5"
-        "@ifi/oh-pi-prompts@0.5.1"
-        "@tmustier/pi-files-widget@0.1.21"
+  programs.pi-coding-agent = {
+    enable = true;
+    extraPackages = with pkgs; [
+      nodejs
+      bun
+    ];
+    settings = {
+      defaultProvider = "github-copilot";
+      defaultModel = "claude-opus-4.8";
+      defaultThinkingLevel = "high";
+      packages = [
+        "npm:pi-btw"
+        "npm:pi-minions"
+        "npm:pi-permission-system"
+        "npm:@ifi/oh-pi-prompts"
+        "npm:@tmustier/pi-files-widget"
       ];
-
-      # npm wrapper — redirects global prefix to writable ~/.pi/npm
-      # since Nix's nodejs has its prefix in the read-only store.
-      npm-wrapper = pkgs.writeShellScriptBin "npm" ''
-        export NPM_CONFIG_PREFIX="$HOME/.pi/npm"
-        export PATH="${pkgs.nodejs}/bin:$PATH"
-        exec ${pkgs.nodejs}/bin/npm "$@"
-      '';
-
-      settings = builtins.toJSON {
-        defaultProvider = "github-copilot";
-        defaultModel = "claude-opus-4.6";
-        defaultThinkingLevel = "high";
-        npmCommand = [ "${npm-wrapper}/bin/npm" ];
-        packages = map (p: "npm:${p}") piPackages;
-      };
-    in
-    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      pi_dir="$HOME/.pi/agent"
-      npm="${npm-wrapper}/bin/npm"
-      $DRY_RUN_CMD mkdir -p "$pi_dir"
-      $DRY_RUN_CMD cp --remove-destination \
-        ${pkgs.writeText "pi-settings.json" settings} \
-        "$pi_dir/settings.json"
-      $DRY_RUN_CMD chmod 644 "$pi_dir/settings.json"
-
-      # Install declared packages (skip if already at the correct version)
-      ${lib.concatMapStringsSep "\n      " (pkg:
-        let
-          # Split "name@version" — handles "@scope/name@version" too
-          parts = builtins.match "(.+)@([^@]+)" pkg;
-          name = builtins.elemAt parts 0;
-          version = builtins.elemAt parts 1;
-        in
-        ''if [ "$($npm ls -g ${name} --depth=0 --json 2>/dev/null | ${pkgs.jq}/bin/jq -r '.dependencies."${name}".version // empty')" = "${version}" ]; then
-            echo "${pkg} already installed, skipping"
-          else
-            $DRY_RUN_CMD $npm install -g ${pkg}
-          fi''
-      ) piPackages}
-
-      # Uninstall packages not in the declared list
-      declared=${pkgs.writeText "pi-declared-pkgs" (lib.concatMapStringsSep "\n" (pkg:
-        # Strip version: "@scope/name@ver" -> "@scope/name", "name@ver" -> "name"
-        let parts = builtins.match "(@[^@]+)@.*" pkg; in
-        if parts != null then builtins.head parts
-        else builtins.head (builtins.match "([^@]+)@.*" pkg)
-      ) piPackages)}
-      for installed in $($npm ls -g --depth=0 --parseable 2>/dev/null | tail -n+2); do
-        name=$(basename "$installed")
-        parent=$(basename "$(dirname "$installed")")
-        if [[ "$parent" == @* ]]; then
-          name="$parent/$name"
-        fi
-        if ! grep -qxF "$name" "$declared"; then
-          echo "Removing undeclared pi package: $name"
-          $DRY_RUN_CMD $npm uninstall -g "$name"
-        fi
-      done
-    '';
+    };
+  };
 
   # pi-permission-system config & policy — copied (not symlinked) so the
   # extension can still write to the files.  Reset on every switch.
@@ -809,9 +715,9 @@
         };
       };
     in
-    lib.hm.dag.entryAfter [ "writeBoundary" "piSettings" ] ''
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       pi_dir="$HOME/.pi/agent"
-      ext_dir="$HOME/.pi/npm/lib/node_modules/pi-permission-system"
+      ext_dir="$HOME/.pi/agent/npm/node_modules/pi-permission-system"
       $DRY_RUN_CMD mkdir -p "$ext_dir"
       $DRY_RUN_CMD cp --remove-destination \
         ${pkgs.writeText "pi-permission-system-config.json" extensionConfig} \
