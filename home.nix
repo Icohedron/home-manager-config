@@ -11,6 +11,11 @@
   useWayland,
   ...
 }:
+let
+  # Packages from the numtide llm-agents flake (built against its own pinned
+  # nixpkgs so the numtide binary cache is hit).
+  llmAgents = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system};
+in
 {
   # -------------------------------------------------------------------------
   # Nix & Nixpkgs Configuration
@@ -69,7 +74,7 @@
     p7zip # 7zip
 
     # --- Sandboxing ---
-    nono # Kernel-enforced (Landlock/Seatbelt) capability-based sandbox
+    llmAgents.nono # Kernel-enforced (Landlock/Seatbelt) capability-based sandbox
 
     # --- Task Runners & Process Management ---
     mask # Markdown documentation that's also command runner like Make
@@ -487,10 +492,16 @@
 
   programs.pi-coding-agent = {
     enable = true;
+    package = llmAgents.pi; # Install pi from the numtide llm-agents flake
     extraPackages = [];
     settings = {
       packages = [];
     };
+  };
+
+  programs.opencode = {
+    enable = true;
+    package = llmAgents.opencode;
   };
 
   # -------------------------------------------------------------------------
