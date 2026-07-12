@@ -15,6 +15,8 @@ let
   # Packages from the numtide llm-agents flake (built against its own pinned
   # nixpkgs so the numtide binary cache is hit).
   llmAgents = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system};
+  # Upstream tirith (>0.3.1) with the issue #111 bash enter-mode self-test.
+  tirithPkg = inputs.tirith.packages.${pkgs.stdenv.hostPlatform.system}.default;
 in
 {
   # -------------------------------------------------------------------------
@@ -73,8 +75,9 @@ in
     unzip # zip decompression
     p7zip # 7zip
 
-    # --- Sandboxing ---
+    # --- Sandboxing  & Security ---
     llmAgents.nono # Kernel-enforced (Landlock/Seatbelt) capability-based sandbox
+    llmAgents.hermes-agent
 
     # --- Task Runners & Process Management ---
     mask # Markdown documentation that's also command runner like Make
@@ -100,10 +103,19 @@ in
 
   home.sessionVariables = { };
 
-
   # -------------------------------------------------------------------------
   # Shell & Shell Integration
   # -------------------------------------------------------------------------
+
+  programs.tirith.enable = true;
+  programs.tirith.package = tirithPkg;
+  # tirith's enter-mode hook installs a bind -x Enter override plus a
+  # PROMPT_COMMAND delivery hook. Starship (mkOrder 1900) hard-replaces
+  # PROMPT_COMMAND, so if tirith inits first its hook is clobbered and enter
+  # mode degrades to preexec (persisting a safe-mode flag). Disable the
+  # module's auto-integration and init tirith LAST (see initExtra below).
+  programs.tirith.enableBashIntegration = false;
+
   home.shell.enableShellIntegration = true;
   home.shellAliases = {
     grep = "rg";
@@ -112,15 +124,29 @@ in
   };
 
   programs.bash.enable = true;
-  programs.bash.initExtra = ''
-    # Skip keychain inside sandbox — reuse the inherited SSH_AUTH_SOCK instead
-    if [[ -z "$SANDBOX" ]]; then
-      eval "$(SHELL=bash ${pkgs.keychain}/bin/keychain --eval --quiet id_ed25519)"
-    fi
+  programs.bash.initExtra = lib.mkMerge [
+    ''
+      # Skip keychain inside sandbox — reuse the inherited SSH_AUTH_SOCK instead
+      if [[ -z "$SANDBOX" ]]; then
+        eval "$(SHELL=bash ${pkgs.keychain}/bin/keychain --eval --quiet id_ed25519)"
+      fi
 
-    # Worktrunk shell integration
-    if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init bash)"; fi
-  '';
+      # Worktrunk shell integration
+      if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init bash)"; fi
+    ''
+    # Init tirith LAST — after starship (mkOrder 1900) and zoxide (mkOrder
+    # 2000) — so neither clobbers tirith's enter-mode bind/PROMPT_COMMAND hook.
+    (lib.mkOrder 3000 ''
+      # Silence tirith's per-command "no issues" advisory in preexec warn-only
+      # mode. Exported here (not via home.sessionVariables) so it applies in
+      # every new interactive shell without a full re-login — hm-session-vars.sh
+      # self-guards against re-sourcing. Real DETECTED/warning/block output is
+      # unaffected; --quiet only drops clean "no issues" lines, tips, and
+      # shadow-binary warnings.
+      export TIRITH_QUIET=1
+      eval "$(${tirithPkg}/bin/tirith init --shell bash)"
+    '')
+  ];
 
   programs.nushell = {
     enable = true;
@@ -141,7 +167,7 @@ in
         cmplt: "source ${completion_dir}/${cmplt}/${cmplt}-completions.nu"
       ) completions
       + "\n\n# Worktrunk shell integration\n"
-      + ''if (which wt | is-not-empty) { mkdir ($nu.default-config-dir | path join vendor/autoload); wt config shell init nu | save --force ($nu.default-config-dir | path join vendor/autoload/wt.nu) }'';
+      + "if (which wt | is-not-empty) { mkdir ($nu.default-config-dir | path join vendor/autoload); wt config shell init nu | save --force ($nu.default-config-dir | path join vendor/autoload/wt.nu) }";
   };
 
   programs.carapace.enable = true;
@@ -493,9 +519,9 @@ in
   programs.pi-coding-agent = {
     enable = true;
     package = llmAgents.pi; # Install pi from the numtide llm-agents flake
-    extraPackages = [];
+    extraPackages = [ ];
     settings = {
-      packages = [];
+      packages = [ ];
     };
   };
 

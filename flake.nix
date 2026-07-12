@@ -15,6 +15,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     llm-agents.url = "github:numtide/llm-agents.nix";
+    # Upstream tirith: nixpkgs pins an older release (0.3.1) that lacks the
+    # bash enter-mode capability self-test (issue #111). Track upstream so the
+    # hook can prove whether bind-x Enter delivery works on this bash build.
+    tirith = {
+      url = "github:sheeki03/tirith";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
