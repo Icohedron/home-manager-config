@@ -3,7 +3,19 @@
   pkgs,
   ...
 }:
+let
+  # Use clangd from clang-tools so clangd can find the standard C/C++ headers
+  # expected by local toolchains.
+  clangdPackage = pkgs.llvmPackages_latest.clang-tools.override { enableLibcxx = false; };
+  clangdPath = "${clangdPackage}/bin/clangd";
+in
 {
+  home.packages = [
+    pkgs.nil
+    pkgs.nixd
+    pkgs.nixfmt
+  ];
+
   programs.zed-editor = {
     enable = true;
     userSettings = {
@@ -48,9 +60,7 @@
       current_line_highlight = "none";
       lsp = {
         "clangd" = {
-          binary.path = "${
-            pkgs.llvmPackages_latest.clang-tools.override { enableLibcxx = false; }
-          }/bin/clangd";
+          binary.path = clangdPath;
         };
       };
     };
@@ -167,7 +177,7 @@
 
     languages = {
       language-server.clangd = {
-        command = "${pkgs.llvmPackages_latest.clang-tools.override { enableLibcxx = false; }}/bin/clangd";
+        command = clangdPath;
       };
 
       language = [

@@ -1,4 +1,4 @@
-# Git-centric tools plus Git and Jujutsu identity/signing configuration.
+# Git-centric tools plus Git, Jujutsu, and terminal VCS workflow integration.
 {
   gitUsername,
   gitEmail,

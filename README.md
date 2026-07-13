@@ -41,6 +41,7 @@ cd ~/nix
     gitUsername = "Your Name";
     gitEmail = "your.email@example.com";
     useWayland = true;
+    npmRegistry = "https://registry.npmjs.org/"; # Per-user npm registry for pi package installs
   }
 ]
 ```

@@ -8,9 +8,12 @@
   ...
 }:
 let
+  # Packages from the numtide llm-agents flake are built against its own pinned
+  # nixpkgs, which helps the numtide binary cache hit reliably.
   llmAgents = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system};
 
   # Keep pi's npm state isolated from the user's global ~/.npm directory.
+  # npmRegistry is provided per-user from users.nix.
   piNpmCacheDir = "${homeDirectory}/.pi/.npm";
   piNpmWrapper = pkgs.writeShellScriptBin "pi-npm" ''
     exec ${pkgs.nodejs}/bin/npm \

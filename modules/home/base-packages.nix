@@ -28,8 +28,6 @@
     # --- Development & Debugging ---
     valgrind-light
     lldb
-    nil
-    nixfmt
     jq
     glow
     worktrunk

@@ -6,7 +6,9 @@
   ...
 }:
 let
-  # Upstream tirith includes the bash enter-mode self-test needed for the local setup.
+  # Upstream tirith (> 0.3.1) includes the bash enter-mode self-test from issue
+  # #111, which this setup relies on to verify whether bind -x Enter delivery
+  # works on the local bash build.
   tirithPkg = inputs.tirith.packages.${pkgs.stdenv.hostPlatform.system}.default;
 in
 {
@@ -30,17 +32,18 @@ in
     enable = true;
     initExtra = lib.mkMerge [
       ''
-        # Skip keychain inside sandbox — reuse the inherited SSH_AUTH_SOCK instead.
-        if [[ -z "$SANDBOX" ]]; then
-          eval "$(SHELL=bash ${pkgs.keychain}/bin/keychain --eval --quiet id_ed25519)"
-        fi
-
         # Worktrunk shell integration.
         if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init bash)"; fi
       ''
+      # Init tirith LAST — after starship (mkOrder 1900) and zoxide (mkOrder
+      # 2000) — so neither clobbers tirith's enter-mode bind/PROMPT_COMMAND hook.
       (lib.mkOrder 3000 ''
-        # Initialize tirith last so later prompt integrations do not clobber its
-        # enter-mode bind/PROMPT_COMMAND hook.
+        # Silence tirith's per-command "no issues" advisory in preexec warn-only
+        # mode. Exported here (not via home.sessionVariables) so it applies in
+        # every new interactive shell without a full re-login — hm-session-vars.sh
+        # self-guards against re-sourcing. Real DETECTED/warning/block output is
+        # unaffected; --quiet only drops clean "no issues" lines, tips, and
+        # shadow-binary warnings.
         export TIRITH_QUIET=1
         eval "$(${tirithPkg}/bin/tirith init --shell bash)"
       '')
@@ -71,14 +74,5 @@ in
 
   programs.carapace.enable = true;
 
-  programs.starship = {
-    enable = true;
-    settings = {
-      env_var.SANDBOX = {
-        style = "bold red";
-        variable = "SANDBOX";
-        format = "[\\[sandbox\\] ]($style)";
-      };
-    };
-  };
+  programs.starship.enable = true;
 }
