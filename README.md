@@ -5,7 +5,7 @@ This repository provides a declarative, reproducible system configuration for Li
 ## Structure
 
 * `flake.nix`: The entry point defining the inputs (Nixpkgs, Home Manager) and output configurations.
-* `users.nix`: A centralized file containing your user details (username, home directory, git configuration).
+* `user.nix`: A centralized file containing your user details (username, home directory, git configuration).
 * `home.nix`: A thin Home Manager entrypoint that imports the module collection under `modules/home/`.
 * `modules/home/`: Self-contained modules grouped by concern (`core`, `shell`, `editors`, `vcs`, `agent-tools`, etc.).
 * `maskfile.md`: A task runner for managing the configuration.
@@ -34,36 +34,34 @@ cd ~/nix
 
 ```nix
 # Edit ~/nix/users.nix
-[
-  {
-    username = "your-username";
-    homeDirectory = "/home/your-username"; # Update to your actual home directory
-    gitUsername = "Your Name";
-    gitEmail = "your.email@example.com";
-    useWayland = true;
-    npmRegistry = "https://registry.npmjs.org/"; # Per-user npm registry for pi package installs
-  }
-]
+{
+  username = "your-username";
+  homeDirectory = "/home/your-username"; # Update to your actual home directory
+  gitUsername = "Your Name";
+  gitEmail = "your.email@example.com";
+  useWayland = true;
+  npmRegistry = "https://registry.npmjs.org/"; # Per-user npm registry for pi package installs
+}
 ```
 
 To prevent accidentally committing your personal details, we highly recommend telling git to ignore changes to this file:
 
 ```bash
-git update-index --assume-unchanged users.nix
+git update-index --assume-unchanged user.nix
 ```
 
 > [!IMPORTANT]
 > Because `--assume-unchanged` hides edits from git, Nix's evaluation cache
-> won't notice when you change `users.nix` and may keep applying a stale
+> won't notice when you change `user.nix` and may keep applying a stale
 > configuration (for example, `nix flake check` failing on an old username).
-> After editing `users.nix`, run your Nix command with `--no-eval-cache` to
+> After editing `user.nix`, run your Nix command with `--no-eval-cache` to
 > bypass the stale cache:
 >
 > ```bash
 > nix flake check --no-eval-cache
 > ```
 
-*Note: If your system's username matches the `username` in `users.nix`, Home Manager will automatically find and apply your configuration.*
+*Note: If your system's username matches the `username` in `user.nix`, Home Manager will automatically find and apply your configuration.*
 
 ### 4. Apply Configuration
 Once configured, you can build and switch to your new Home Manager environment:
