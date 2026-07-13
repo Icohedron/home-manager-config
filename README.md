@@ -6,7 +6,8 @@ This repository provides a declarative, reproducible system configuration for Li
 
 * `flake.nix`: The entry point defining the inputs (Nixpkgs, Home Manager) and output configurations.
 * `users.nix`: A centralized file containing your user details (username, home directory, git configuration).
-* `home.nix`: The core Home Manager module containing all your packages, CLI utilities, and program settings.
+* `home.nix`: A thin Home Manager entrypoint that imports the module collection under `modules/home/`.
+* `modules/home/`: Self-contained modules grouped by concern (`core`, `shell`, `editors`, `vcs`, `agent-tools`, etc.).
 * `maskfile.md`: A task runner for managing the configuration.
 
 ## Getting Started
