@@ -66,6 +66,7 @@
                 gitUsername
                 gitEmail
                 useWayland
+                npmRegistry
                 ;
             };
             modules = [

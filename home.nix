@@ -9,6 +9,7 @@
   gitUsername,
   gitEmail,
   useWayland,
+  npmRegistry,
   ...
 }:
 let
@@ -17,6 +18,17 @@ let
   llmAgents = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system};
   # Upstream tirith (>0.3.1) with the issue #111 bash enter-mode self-test.
   tirithPkg = inputs.tirith.packages.${pkgs.stdenv.hostPlatform.system}.default;
+
+  # Pi-specific npm settings so pi package installs do not use ~/.npm.
+  # npmRegistry is provided per-user from users.nix.
+  piNpmCacheDir = "${homeDirectory}/.pi/.npm";
+  piNpmRegistry = npmRegistry;
+  piNpmWrapper = pkgs.writeShellScriptBin "pi-npm" ''
+    exec ${pkgs.nodejs}/bin/npm \
+      --cache ${lib.escapeShellArg piNpmCacheDir} \
+      --registry ${lib.escapeShellArg piNpmRegistry} \
+      "$@"
+  '';
 in
 {
   # -------------------------------------------------------------------------
@@ -62,6 +74,7 @@ in
   # Packages & Session Variables
   # -------------------------------------------------------------------------
   home.packages = with pkgs; [
+    piNpmWrapper
     # --- File & Disk Utilities ---
     dust # A better du (disk-use analyzer)
     dua # Interactive disk-use analyzer
@@ -102,6 +115,10 @@ in
   ];
 
   home.sessionVariables = { };
+
+  home.activation.ensurePiNpmCacheDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p ${lib.escapeShellArg piNpmCacheDir}
+  '';
 
   # -------------------------------------------------------------------------
   # Shell & Shell Integration
@@ -519,9 +536,18 @@ in
   programs.pi-coding-agent = {
     enable = true;
     package = llmAgents.pi; # Install pi from the numtide llm-agents flake
-    extraPackages = [ ];
+    configDir = "${config.home.homeDirectory}/.pi/agent";
+    extraPackages = [
+      pkgs.nodejs
+      pkgs.bun
+    ];
     settings = {
-      packages = [ ];
+      npmCommand = [ "${piNpmWrapper}/bin/pi-npm" ];
+      packages = [
+        "npm:pi-mcp-adapter"
+        "npm:pi-hermes-memory"
+        "npm:@tmustier/pi-files-widget"
+      ];
     };
   };
 
