@@ -79,3 +79,41 @@ Once installed, your environment includes a task runner called `mask`. You can u
 * `mask format` - Formats all Nix files in the repository using `nixfmt`.
 * `mask update` - Update `flake.lock` with the latest package versions.
 * `mask clean` - Run the Nix garbage collector to free up disk space.
+
+## Using Zsh
+
+This configuration installs and configures [Zsh](https://www.zsh.org/) (the Z shell) via Home Manager. Zsh is a powerful, interactive Unix shell that is broadly compatible with Bash while adding conveniences such as smarter tab completion, spelling correction, shared command history, rich globbing, and extensive theming/plugin support. Here it comes pre-wired with integrations like Starship (prompt), Carapace (completions), Tirith, and Worktrunk.
+
+Applying the configuration installs Zsh into your environment, but it does **not** automatically make Zsh your login shell. To set Zsh as your default shell, use `chsh` (change shell).
+
+### Set Zsh as your default shell
+
+1. Find the path to the Home Manager-provided Zsh binary:
+
+   ```bash
+   which zsh
+   ```
+
+2. The shell must be listed in `/etc/shells` before `chsh` will accept it. If the path from the previous step is missing, add it (requires root):
+
+   ```bash
+   command -v zsh | sudo tee -a /etc/shells
+   ```
+
+3. Change your default shell to Zsh:
+
+   ```bash
+   chsh -s "$(which zsh)"
+   ```
+
+4. Log out and back in (or open a new terminal session) for the change to take effect. Verify with:
+
+   ```bash
+   echo $SHELL
+   ```
+
+> [!NOTE]
+> On NixOS, the store path to `zsh` changes on updates, which can break a
+> `chsh`-set login shell. Prefer setting `users.users.<name>.shell = pkgs.zsh;`
+> in your NixOS configuration instead. On non-NixOS systems, `chsh` with the
+> path above is the standard approach.
