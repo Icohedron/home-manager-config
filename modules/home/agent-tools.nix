@@ -21,6 +21,25 @@ let
       --registry ${lib.escapeShellArg npmRegistry} \
       "$@"
   '';
+  piModels = builtins.toJSON {
+    providers = {
+      ollama = {
+        baseUrl = "http://127.0.0.1:11434/v1";
+        api = "openai-completions";
+        apiKey = "ollama";
+        compat = {
+          supportsDeveloperRole = false;
+          supportsReasoningEffort = false;
+        };
+        models = [
+          {
+            id = "openbmb/minicpm5:latest";
+            name = "MiniCPM 5 (Local)";
+          }
+        ];
+      };
+    };
+  };
 in
 {
   home.packages = [
@@ -35,6 +54,13 @@ in
     mkdir -p ${lib.escapeShellArg piNpmCacheDir}
   '';
 
+  services.ollama = {
+    enable = true;
+    package = pkgs.ollama-vulkan;
+  };
+
+  home.file.".pi/agent/models.json".text = piModels;
+
   programs.pi-coding-agent = {
     enable = true;
     package = llmAgents.pi;
@@ -45,6 +71,8 @@ in
     ];
     settings = {
       npmCommand = [ "${piNpmWrapper}/bin/pi-npm" ];
+      defaultProvider = "ollama";
+      defaultModel = "openbmb/minicpm5:latest";
       packages = [
         "npm:pi-mcp-adapter"
         "npm:pi-hermes-memory"
