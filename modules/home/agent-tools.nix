@@ -21,6 +21,12 @@ let
       --registry ${lib.escapeShellArg npmRegistry} \
       "$@"
   '';
+  # Context window pi advertises for the local model. This MUST match the
+  # context Ollama actually serves (OLLAMA_CONTEXT_LENGTH below); otherwise pi
+  # thinks it has more room than Ollama provides and Ollama silently truncates
+  # the prompt (dropping tool definitions / system prompt, which breaks tool
+  # calling). Raising it costs VRAM, so tune to what the GPU can hold.
+  ollamaContextLength = 131072; # 128K (128 * 1024)
   piModels = builtins.toJSON {
     providers = {
       ollama = {
@@ -33,8 +39,30 @@ let
         };
         models = [
           {
-            id = "openbmb/minicpm5:latest";
-            name = "MiniCPM 5 (Local)";
+            id = "gemma4:12b";
+            name = "Gemma 4 12B (Local)";
+            input = [ "text" "image" ];
+            contextWindow = ollamaContextLength;
+            maxTokens = 16384;
+            # gemma4 reports the `thinking` capability. Expose it in pi and let
+            # pi send a reasoning effort; Ollama's OpenAI endpoint maps
+            # reasoning_effort -> think level. Override the provider-level
+            # supportsReasoningEffort = false for this model.
+            reasoning = true;
+            compat = {
+              supportsReasoningEffort = true;
+              thinkingFormat = "reasoning_effort";
+            };
+            # Map pi's thinking levels to the low/medium/high values Ollama
+            # understands. null = level hidden/unsupported.
+            thinkingLevelMap = {
+              minimal = null;
+              low = "low";
+              medium = "medium";
+              high = "high";
+              xhigh = null;
+              max = null;
+            };
           }
         ];
       };
@@ -57,6 +85,19 @@ in
   services.ollama = {
     enable = true;
     package = pkgs.ollama-vulkan;
+    # Ollama defaults to a small context (~4096) regardless of what the model
+    # supports, and pi's OpenAI-compatible requests do not send num_ctx. Set it
+    # server-side so long prompts (system prompt + tool schemas) are not
+    # truncated. Keep this equal to the model's contextWindow above.
+    environmentVariables = {
+      OLLAMA_CONTEXT_LENGTH = toString ollamaContextLength;
+      # Reduce KV-cache memory so a 128K context can fit in VRAM.
+      # q8_0 roughly halves KV-cache size with minimal quality loss and
+      # requires flash attention to be enabled. Verify it actually engages on
+      # Vulkan via `journalctl --user -u ollama -f` when a model loads.
+      OLLAMA_FLASH_ATTENTION = "1";
+      OLLAMA_KV_CACHE_TYPE = "q8_0";
+    };
   };
 
   home.file.".pi/agent/models.json".text = piModels;
@@ -71,8 +112,9 @@ in
     ];
     settings = {
       npmCommand = [ "${piNpmWrapper}/bin/pi-npm" ];
-      defaultProvider = "ollama";
-      defaultModel = "openbmb/minicpm5:latest";
+      defaultProvider = "github-copilot";
+      defaultModel = "claude-opus-4.8";
+      defaultThinkingLevel = "high";
       packages = [
         "npm:pi-mcp-adapter"
         "npm:pi-hermes-memory"
