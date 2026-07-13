@@ -99,11 +99,11 @@ in
     hyperfine # Benchmark timing tool
 
     # --- Development & Debugging ---
+    llmAgents.codegraph # Pre-indexed code knowledge graph for AI coding agents
+    smartcat # Pipe text to LLMs from the command line
     valgrind-light # Debugging and profiling
     lldb # Debugging
     nil # An LSP for Nix
-    graphify # Knowledge graph generator for AI
-    smartcat # Pipe text to LLMs from the command line
     nixfmt # Nix code formatter
     jq # JSON processor
     glow # Markdown renderer for the CLI
@@ -547,6 +547,11 @@ in
         "npm:pi-mcp-adapter"
         "npm:pi-hermes-memory"
         "npm:@tmustier/pi-files-widget"
+        "npm:@vndv/pi-codegraph"
+        "npm:pi-readseek"
+        "npm:pi-web-access"
+        "npm:pi-subagents"
+        "npm:pi-simplify"
       ];
     };
   };
