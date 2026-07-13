@@ -57,9 +57,4 @@ in
       ];
     };
   };
-
-  programs.opencode = {
-    enable = true;
-    package = llmAgents.opencode;
-  };
 }
