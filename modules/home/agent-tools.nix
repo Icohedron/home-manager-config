@@ -33,8 +33,14 @@ in
     package = pkgs.pi-coding-agent;
     configDir = "${homeDirectory}/.pi/agent";
     extraPackages = [
+      # General nodejs dependencies
       pkgs.nodejs
       pkgs.bun
+
+      # pi-files-widget dependencies
+      pkgs.glow
+      pkgs.jq
+      pkgs.delta
     ];
     settings = {
       npmCommand = [ "${piNpmWrapper}/bin/pi-npm" ];
@@ -51,6 +57,16 @@ in
         "npm:pi-subagents"
         "npm:pi-simplify"
       ];
+      readseek = {
+        replacedTools = [ "read" "edit" "write" "grep" ];
+        imageMode = "auto";
+        syntaxValidation = "warn";
+        timeoutMs = "120000";
+        grep = {
+          maxLines = 2000;
+          maxBytes = 51200;
+        };
+      };
     };
   };
 }
