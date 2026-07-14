@@ -56,16 +56,12 @@ in
         "npm:pi-web-access"
         "npm:pi-subagents"
         "npm:pi-simplify"
+        "npm:pi-schedule-prompt"
       ];
       readseek = {
         replacedTools = [ "read" "edit" "write" "grep" ];
         imageMode = "auto";
         syntaxValidation = "warn";
-        timeoutMs = "120000";
-        grep = {
-          maxLines = 2000;
-          maxBytes = 51200;
-        };
       };
     };
   };
