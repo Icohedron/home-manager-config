@@ -31,6 +31,7 @@
     jq
     glow
     worktrunk
+    dotenv-cli
 
     # --- Presentations & Misc ---
     presenterm
