@@ -16,6 +16,9 @@
   };
 
   programs.zellij.enable = true;
+  programs.zellij.enableZshIntegration = true;
+  programs.zellij.enableBashIntegration = true;
+  programs.zellij.settings.default_shell = "zsh";
 
   xdg.configFile."zellij/config.kdl".text = ''
     show_startup_tips false
