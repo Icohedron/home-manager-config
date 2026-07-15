@@ -49,14 +49,14 @@ in
       defaultThinkingLevel = "high";
       packages = [
         "npm:pi-mcp-adapter"
-        "npm:pi-hermes-memory"
         "npm:@tmustier/pi-files-widget"
         "npm:@vndv/pi-codegraph"
         "npm:pi-readseek"
         "npm:pi-web-access"
-        "npm:pi-subagents"
         "npm:pi-simplify"
         "npm:pi-schedule-prompt"
+        "npm:pi-observational-memory"
+        "git:github.com/HazAT/pi-interactive-subagents"
       ];
       readseek = {
         replacedTools = [ "read" "edit" "write" "grep" ];
