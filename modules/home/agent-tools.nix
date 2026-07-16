@@ -56,7 +56,7 @@ in
         "npm:pi-simplify"
         "npm:pi-schedule-prompt"
         "npm:pi-observational-memory"
-        "git:github.com/HazAT/pi-interactive-subagents"
+        "npm:pi-subagents"
       ];
       readseek = {
         replacedTools = [ "read" "edit" "write" "grep" ];
