@@ -7,6 +7,7 @@
   imports = [
     ./core.nix
     ./base-packages.nix
+    ./registries.nix
     ./agent-tools.nix
     ./shell.nix
     ./cli-tools.nix

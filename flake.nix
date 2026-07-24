@@ -49,6 +49,8 @@
               gitEmail
               useWayland
               npmRegistry
+              pypiRegistry
+              nugetRegistry
               ;
           };
           modules = [

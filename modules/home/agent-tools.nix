@@ -8,7 +8,8 @@
 }:
 let
   # Keep pi's npm state isolated from the user's global ~/.npm directory.
-  # npmRegistry is provided per-user from users.nix.
+  # npmRegistry is provided per-user from user.nix (see registries.nix for the
+  # global npm/PyPI/NuGet registry configuration).
   piNpmCacheDir = "${homeDirectory}/.pi/.npm";
   piNpmWrapper = pkgs.writeShellScriptBin "pi-npm" ''
     exec ${pkgs.nodejs}/bin/npm \
