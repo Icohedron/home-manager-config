@@ -9,6 +9,7 @@
     ./base-packages.nix
     ./registries.nix
     ./agent-tools.nix
+    ./llama-cpp.nix
     ./shell.nix
     ./cli-tools.nix
     ./vcs.nix

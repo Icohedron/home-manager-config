@@ -7,7 +7,7 @@ This repository provides a declarative, reproducible system configuration for Li
 * `flake.nix`: The entry point defining the inputs (Nixpkgs, Home Manager) and output configurations.
 * `user.nix`: A centralized file containing your user details (username, home directory, git configuration).
 * `home.nix`: A thin Home Manager entrypoint that imports the module collection under `modules/home/`.
-* `modules/home/`: Self-contained modules grouped by concern (`core`, `shell`, `editors`, `vcs`, `agent-tools`, etc.).
+* `modules/home/`: Self-contained modules grouped by concern (`core`, `shell`, `editors`, `vcs`, `agent-tools`, `llama-cpp`, etc.).
 * `maskfile.md`: A task runner for managing the configuration.
 
 ## Getting Started
@@ -79,6 +79,76 @@ Once installed, your environment includes a task runner called `mask`. You can u
 * `mask format` - Formats all Nix files in the repository using `nixfmt`.
 * `mask update` - Update `flake.lock` with the latest package versions.
 * `mask clean` - Run the Nix garbage collector to free up disk space.
+
+## Local Models with llama.cpp
+
+`modules/home/llama-cpp.nix` runs [llama.cpp](https://github.com/ggml-org/llama.cpp)
+as a systemd user service in *router mode*, so a single OpenAI-compatible
+endpoint on `http://127.0.0.1:8080` can load and unload models on demand.
+
+Models are declared in an INI preset generated from Nix. Each section becomes a
+router-visible model id, and each key is a `llama-server` flag without its
+leading dashes. The preset currently ships one model:
+
+| | |
+|---|---|
+| Model id | `Qwen3.6-35B-A3B` |
+| Weights | [`unsloth/Qwen3.6-35B-A3B-GGUF`](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF), quantization `UD-Q3_K_XL` (~16.9 GB) |
+| Context window | 262144 tokens (256K, the model's native maximum) |
+| KV cache | `q8_0` with flash attention (~2.6 GB at full context) |
+| VRAM budget | 12 GB |
+
+About 91% of this model is mixture-of-experts weight, so it does not fit in
+12 GB at any quantization. The preset instead spends VRAM on the KV cache and
+the dense layers and lets llama.cpp's `--fit` logic overflow expert tensors into
+system RAM; only ~3B parameters are active per token, so CPU-side experts stay
+workable. That also means the quantization is bounded by system RAM rather than
+VRAM — `UD-Q4_K_XL` (~22.4 GB) is the upgrade if there is RAM to spare.
+
+> [!IMPORTANT]
+> The preset pins `ctx-size` explicitly, and that is load-bearing. llama.cpp
+> only auto-shrinks the context to fit VRAM when it was left unset, so removing
+> that line would silently give you a 4096-token window instead of offloading
+> more weights.
+
+Weights are **not** downloaded at build time. The router fetches them from
+Hugging Face into `~/.cache/llama.cpp` the first time the model is requested,
+and releases the memory again after 15 idle minutes. Expect the first request to
+take a while.
+
+Useful commands:
+
+```bash
+mask llama status     # service state and the model ids the router advertises
+mask llama logs       # load/download progress
+mask llama download   # fetch the weights ahead of time, with a progress bar
+mask llama start|stop|restart
+```
+
+Every model is declared in the module's preset and pulled with `hf-repo`;
+there is no scan directory. Note that llama.cpp separately auto-registers
+anything already sitting in `~/.cache/llama.cpp`, so `/v1/models` lists the
+cached weights a second time under their bare `repo:quant` id. Only the
+preset id (`Qwen3.6-35B-A3B`) carries the tuning described above — the
+auto-registered entry loads with llama.cpp defaults, including a far smaller
+context window.
+
+> [!NOTE]
+> The service uses `pkgs.llama-cpp-vulkan`, which drives an AMD/Intel/NVIDIA GPU
+> through Vulkan and silently falls back to CPU-only inference when no Vulkan
+> device is visible. Inside a container, that requires `/dev/dri` to be passed
+> through and readable; check with `llama-server --list-devices`.
+
+### Using the model from Pi
+
+The same module registers the model with Pi Coding Agent by merging a provider
+into `programs.pi-coding-agent.models`, which Home Manager writes to
+`~/.pi/agent/models.json`. Select it in Pi with `/model` and pick
+**Qwen3.6 35B A3B (local llama.cpp)**.
+
+`LLAMA_BASE_URL` is exported as well, so Pi's built-in `/llama` command can list,
+load, unload, and download router models without running `/login llama.cpp`
+first.
 
 ## Using Zsh
 

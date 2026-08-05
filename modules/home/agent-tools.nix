@@ -1,4 +1,8 @@
 # AI/agent tooling, supporting utilities, and the isolated npm setup used by pi.
+#
+# The local llama.cpp server and the Pi model entry it provides live in
+# ./llama-cpp.nix; Home Manager merges that provider into
+# programs.pi-coding-agent.models.
 {
   config,
   lib,
