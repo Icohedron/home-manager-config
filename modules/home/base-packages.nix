@@ -32,9 +32,11 @@
     glow
     worktrunk
     dotenv-cli
+    hunk
 
     # --- Presentations & Misc ---
     presenterm
     doitlive
+    drawio
   ];
 }

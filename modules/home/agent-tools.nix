@@ -87,6 +87,7 @@ in
         "npm:pi-subagents"
         "npm:pi-tool-display"
         "npm:pi-zentui"
+        "npm:pi-drawio"
       ];
     };
   };
