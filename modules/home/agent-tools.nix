@@ -24,7 +24,7 @@ let
       "$@"
   '';
 
-  # Herdr (see cli-tools.nix) only detects pi once its agent-state extension is
+  # Herdr (see ./herdr) only detects pi once its agent-state extension is
   # installed, which `herdr integration install pi` normally does imperatively.
   # Instead, run that same command at build time against a throwaway HOME and
   # capture the generated extension, so Home Manager can link it declaratively.
