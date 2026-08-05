@@ -15,9 +15,19 @@
     shellWrapperName = "y";
   };
 
+  # Herdr: terminal workspace/agent multiplexer (https://herdr.dev).
+  # Config is rendered to ~/.config/herdr/config.toml by Home Manager.
+  programs.herdr = {
+    enable = true;
+    settings = {
+      onboarding = false;
+      terminal.default_shell = "zsh";
+    };
+  };
+
   programs.zellij.enable = true;
-  programs.zellij.enableZshIntegration = true;
-  programs.zellij.enableBashIntegration = true;
+  programs.zellij.enableZshIntegration = false;
+  programs.zellij.enableBashIntegration = false;
   programs.zellij.settings.default_shell = "zsh";
 
   xdg.configFile."zellij/config.kdl".text = ''

@@ -1,5 +1,6 @@
 # AI/agent tooling, supporting utilities, and the isolated npm setup used by pi.
 {
+  config,
   lib,
   pkgs,
   homeDirectory,
@@ -12,51 +13,30 @@ let
   # global npm/PyPI/NuGet registry configuration).
   piConfigDir = "${homeDirectory}/.pi/agent";
   piNpmCacheDir = "${homeDirectory}/.pi/.npm";
-  # Custom github-copilot entries must include Copilot's static IDE headers or
-  # IDE-auth requests fail, so keep an explicit claude-opus-5 alias here.
-  piModelsConfig = {
-    providers = {
-      github-copilot = {
-        models = [
-          {
-            id = "claude-opus-5";
-            name = "Claude Opus 5";
-            api = "anthropic-messages";
-            baseUrl = "https://api.individual.githubcopilot.com";
-            headers = {
-              User-Agent = "GitHubCopilotChat/0.35.0";
-              Editor-Version = "vscode/1.107.0";
-              Editor-Plugin-Version = "copilot-chat/0.35.0";
-              Copilot-Integration-Id = "vscode-chat";
-            };
-            reasoning = true;
-            thinkingLevelMap = {
-              xhigh = "xhigh";
-              max = "max";
-            };
-            input = [ "text" "image" ];
-            contextWindow = 1000000;
-            maxTokens = 128000;
-            cost = {
-              input = 5;
-              output = 25;
-              cacheRead = 0.5;
-              cacheWrite = 6.25;
-            };
-            compat = {
-              forceAdaptiveThinking = true;
-            };
-          }
-        ];
-      };
-    };
-  };
   piNpmWrapper = pkgs.writeShellScriptBin "pi-npm" ''
     exec ${pkgs.nodejs}/bin/npm \
       --cache ${lib.escapeShellArg piNpmCacheDir} \
       --registry ${lib.escapeShellArg npmRegistry} \
       "$@"
   '';
+
+  # Herdr (see cli-tools.nix) only detects pi once its agent-state extension is
+  # installed, which `herdr integration install pi` normally does imperatively.
+  # Instead, run that same command at build time against a throwaway HOME and
+  # capture the generated extension, so Home Manager can link it declaratively.
+  # The extension stays in sync with whatever herdr version nixpkgs provides.
+  herdrCfg = config.programs.herdr;
+  herdrPiExtension =
+    pkgs.runCommand "herdr-pi-agent-state-extension"
+      {
+        nativeBuildInputs = [ herdrCfg.package ];
+      }
+      ''
+        export HOME="$TMPDIR/home"
+        mkdir -p "$HOME/.pi/agent/extensions"
+        herdr integration install pi
+        cp "$HOME/.pi/agent/extensions/herdr-agent-state.ts" "$out"
+      '';
 in
 {
   home.packages = [
@@ -69,7 +49,9 @@ in
     mkdir -p ${lib.escapeShellArg piNpmCacheDir}
   '';
 
-  home.file.".pi/agent/models.json".text = builtins.toJSON piModelsConfig;
+  home.file = lib.mkIf (herdrCfg.enable && herdrCfg.package != null) {
+    "${piConfigDir}/extensions/herdr-agent-state.ts".source = herdrPiExtension;
+  };
 
   programs.pi-coding-agent = {
     enable = true;
@@ -102,11 +84,6 @@ in
         "npm:pi-tool-display"
         "npm:pi-zentui"
       ];
-      readseek = {
-        replacedTools = [ "read" "edit" "write" "grep" ];
-        imageMode = "auto";
-        syntaxValidation = "warn";
-      };
     };
   };
 }
