@@ -16,7 +16,7 @@
   ...
 }:
 let
-  version = "0.29.0";
+  version = "0.30.1";
 
   tomlFormat = pkgs.formats.toml { };
 
@@ -24,13 +24,13 @@ let
     owner = "persiyanov";
     repo = "herdr-reviewr";
     rev = "v${version}";
-    hash = "sha256-xr9V9rJjT3RMir/luIn09eo2bXuw5Fxn3lkHHZXAOTA=";
+    hash = "sha256-U+h5iMtkSslElRpcohGzVK1xbfsepJV9vNPO05IRwag=";
   };
 
   # Prebuilt binary for this flake's only system (see flake.nix).
   binary = pkgs.fetchurl {
     url = "https://github.com/persiyanov/herdr-reviewr/releases/download/v${version}/herdr-reviewr-x86_64-unknown-linux-musl.tar.gz";
-    hash = "sha256-7BsgdETTbLPCeaFw110y+aby2xyFrFSS/XfqcjsbgTU=";
+    hash = "sha256-TAIzZeDIymem8uSmJWrxxJqRanqFPpRSbt93qXrn8hM=";
   };
 
   pluginRoot = pkgs.runCommand "herdr-reviewr-${version}" { } ''

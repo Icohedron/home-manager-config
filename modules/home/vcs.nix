@@ -19,18 +19,20 @@
         signingkey = "~/.ssh/id_ed25519.pub";
       };
       core.editor = "hx";
+      delta.navigate = true;
+      delta.dark = true;
 
-      # Hunk as the default diff viewer/pager.
-      core.pager = "hunk pager";
-      pager = {
-        diff = "hunk pager";
-        show = "hunk pager";
-        log = "hunk pager";
-        stash = "hunk pager";
-      };
-      diff.tool = "hunk";
-      difftool.prompt = false;
-      "difftool \"hunk\"".cmd = ''hunk difftool "$LOCAL" "$REMOTE" "$BASE"'';
+      # # Hunk as the default diff viewer/pager.
+      # core.pager = "hunk pager";
+      # pager = {
+      #   diff = "hunk pager";
+      #   show = "hunk pager";
+      #   log = "hunk pager";
+      #   stash = "hunk pager";
+      # };
+      # diff.tool = "hunk";
+      # difftool.prompt = false;
+      # "difftool \"hunk\"".cmd = ''hunk difftool "$LOCAL" "$REMOTE" "$BASE"'';
 
       merge.conflictstyle = "zdiff3";
       commit.gpgsign = true;
