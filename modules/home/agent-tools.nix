@@ -41,6 +41,51 @@ let
         herdr integration install pi
         cp "$HOME/.pi/agent/extensions/herdr-agent-state.ts" "$out"
       '';
+
+  # Sandbox profile selected with `nono run -p pi ...`.
+  nonoPiProfile = (pkgs.formats.json { }).generate "nono-profile-pi.json" {
+    extends = "nolabs-ai/pi";
+    meta.name = "pi";
+    groups = {
+      include = [ ];
+      exclude = [ ];
+    };
+    commands = {
+      allow = [ ];
+      deny = [ "herdr" ];
+    };
+    # command_policies.commands.herdr.from.session = "deny"; # Causes nono to stall and deny access to all binaries in ~/.nix-profile/bin
+    workdir.access = "readwrite";
+    filesystem = {
+      allow = [
+        "/tmp"
+        "/dev/shm"
+      ];
+      read = [ ];
+      write = [ ];
+      allow_file = [ ];
+      read_file = [ ];
+      write_file = [ ];
+      deny = [ ];
+      bypass_protection = [ ];
+      suppress_save_prompt = [ ];
+    };
+    network = {
+      block = false;
+      allow_domain = [ ];
+      credentials = [ ];
+      open_port = [ ];
+      listen_port = [ ];
+      custom_credentials = { };
+    };
+    env_credentials = { };
+    hooks = { };
+    rollback = {
+      exclude_patterns = [ ];
+      exclude_globs = [ ];
+    };
+    allow_gpu = true;
+  };
 in
 {
   home.packages = [
@@ -56,6 +101,8 @@ in
   home.file = lib.mkIf (herdrCfg.enable && herdrCfg.package != null) {
     "${piConfigDir}/extensions/herdr-agent-state.ts".source = herdrPiExtension;
   };
+
+  xdg.configFile."nono/profiles/pi.json".source = nonoPiProfile;
 
   programs.pi-coding-agent = {
     enable = true;
