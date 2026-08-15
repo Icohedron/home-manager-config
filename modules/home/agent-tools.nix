@@ -67,8 +67,8 @@ let
         "."
         "~/.gitconfig"
         "~/.config/git/config"
-        "/dev/null"
-        "/tmp"
+        "~/.cache/mesa_shader_cache"
+        "~/.cache/shader_validation_cache-*.bin"
         # workspaces
         "~/hlsl-dev"
       ];
@@ -85,15 +85,18 @@ let
       allowWrite = [
         "."
         "/dev/null"
+        "/dev/shm"
         "/tmp"
+        "~/.cache/mesa_shader_cache"
+        "~/.cache/shader_validation_cache-*.bin"
         # workspaces
         "~/hlsl-dev"
       ];
     };
     network = {
       allowNetwork = false;
-      allowLocalBinding = false;
-      allowAllUnixSockets = false;
+      allowLocalBinding = true;
+      allowAllUnixSockets = true;
       allowedDomains = [];
       deniedDomains= [];
     };
@@ -108,9 +111,13 @@ let
       };
       bash = {
         "*" = "allow";
-        "sudo *" = "ask";
-        "herdr *" = "ask";
+        "sudo *" = "deny";
+        "herdr *" = "deny";
+        "distrobox*" = "deny";
       };
+      read = "allow";
+      write = "allow";
+      edit = "allow";
       external_directory = "allow";
     };
   };
