@@ -16,7 +16,7 @@
     settings = {
       onboarding = false;
       terminal.default_shell = "zsh";
-      session.resume_agents_on_restore = false;
+      session.resume_agents_on_restore = true;
 
       # Plugin keybindings live here rather than in the plugin modules: herdr
       # takes them as one `[[keys.command]]` list, which two modules cannot each

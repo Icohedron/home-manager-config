@@ -42,76 +42,114 @@ let
         cp "$HOME/.pi/agent/extensions/herdr-agent-state.ts" "$out"
       '';
 
-  # Sandbox profile selected with `nono run -p pi ...`.
-  nonoPiProfile = (pkgs.formats.json { }).generate "nono-profile-pi.json" {
-    extends = "nolabs-ai/pi";
-    meta.name = "pi";
-    groups = {
-      include = [ ];
-      exclude = [ ];
+  piToolDisplayConfig = (pkgs.formats.json { }).generate "config.json" {
+    registerToolOverrides = {
+      "write" = false;
+      "read" = false;
+      "grep" = false;
+      "edit" = false;
+      "bash" = false;
+      "find" = true;
+      "ls" = true;
     };
-    commands = {
-      allow = [ ];
-      deny = [ "herdr" ];
-    };
-    # command_policies.commands.herdr.from.session = "deny"; # Causes nono to stall and deny access to all binaries in ~/.nix-profile/bin
-    workdir.access = "readwrite";
+  };
+
+  piSandboxConfig = (pkgs.formats.json { }).generate "sandbox.json" {
+    enabled = true;
+    shell.readAccess = "policy";
     filesystem = {
-      allow = [
-        "/tmp"
-        "/dev/shm"
+      denyRead = [
+        "/Users"
+        "/home"
+        "/var/home"
       ];
-      read = [ ];
-      write = [ ];
-      allow_file = [ ];
-      read_file = [ ];
-      write_file = [ ];
-      deny = [ ];
-      bypass_protection = [ ];
-      suppress_save_prompt = [ ];
+      allowRead = [
+        "."
+        "~/.gitconfig"
+        "~/.config/git/config"
+        "/dev/null"
+        "/tmp"
+        # workspaces
+        "~/hlsl-dev"
+      ];
+      denyWrite = [
+        "**/.env"
+        "**/.direnv"
+        "**/.envrc"
+        "**/.env.*"
+        "**/*.pem"
+        "**/*.key"
+        ".pi/sandbox.json"
+        "~/.pi/agent/sandbox.json"
+      ];
+      allowWrite = [
+        "."
+        "/dev/null"
+        "/tmp"
+        # workspaces
+        "~/hlsl-dev"
+      ];
     };
     network = {
-      block = false;
-      allow_domain = [ ];
-      credentials = [ ];
-      open_port = [ ];
-      listen_port = [ ];
-      custom_credentials = { };
+      allowNetwork = false;
+      allowLocalBinding = false;
+      allowAllUnixSockets = false;
+      allowedDomains = [];
+      deniedDomains= [];
     };
-    env_credentials = { };
-    hooks = { };
-    rollback = {
-      exclude_patterns = [ ];
-      exclude_globs = [ ];
+  };
+
+  # Note: Let the sandbox configuration handle file permissions
+  piPermissionsConfig = (pkgs.formats.json { }).generate "config.json" {
+    permission = {
+      "*" = "allow";
+      path = {
+        "*" = "allow";
+      };
+      bash = {
+        "*" = "allow";
+        "sudo *" = "ask";
+        "herdr *" = "ask";
+      };
+      external_directory = "allow";
     };
-    allow_gpu = true;
   };
 in
 {
-  home.packages = [
-    piNpmWrapper
-    pkgs.nono
-    pkgs.codegraph
-  ];
-
   home.activation.ensurePiNpmCacheDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p ${lib.escapeShellArg piNpmCacheDir}
   '';
 
-  home.file = lib.mkIf (herdrCfg.enable && herdrCfg.package != null) {
+  home.file = {
+    "${piConfigDir}/extensions/pi-tool-display/config.json".source = piToolDisplayConfig;
+    "${piConfigDir}/extensions/pi-permission-system/config.json".source = piPermissionsConfig;
+    "${piConfigDir}/sandbox.json".source = piSandboxConfig;
+  }
+  // lib.optionalAttrs (herdrCfg.enable && herdrCfg.package != null) {
     "${piConfigDir}/extensions/herdr-agent-state.ts".source = herdrPiExtension;
   };
-
-  xdg.configFile."nono/profiles/pi.json".source = nonoPiProfile;
 
   programs.pi-coding-agent = {
     enable = true;
     package = pkgs.pi-coding-agent;
     configDir = piConfigDir;
     extraPackages = [
+      piNpmWrapper
+
       # General nodejs dependencies
       pkgs.nodejs
       pkgs.bun
+
+      # pi-drawio dependencies
+      pkgs.drawio
+
+      # pi-codegraph dependencies
+      pkgs.codegraph
+
+      # pi-sandbox dependencies
+      pkgs.ripgrep
+      pkgs.bubblewrap
+      pkgs.socat
 
       # pi-files-widget dependencies
       pkgs.glow
@@ -124,10 +162,13 @@ in
       defaultModel = "claude-opus-5";
       defaultThinkingLevel = "high";
       packages = [
+        # Isolation and permissions
+        "npm:pi-landstrip"
+        "npm:@gotgenes/pi-permission-system"
+        # Others
         "npm:pi-mcp-adapter"
         "npm:@tmustier/pi-files-widget"
         "npm:@vndv/pi-codegraph"
-        "npm:pi-web-access"
         "npm:pi-simplify"
         "npm:pi-schedule-prompt"
         "npm:pi-observational-memory"
@@ -135,7 +176,29 @@ in
         "npm:pi-tool-display"
         "npm:pi-zentui"
         "npm:pi-drawio"
+        "npm:pi-readseek"
       ];
+
+      readseek = {
+        overrideTools = [
+          "write"
+          "read"
+          "grep"
+          "edit"
+        ];
+        imageMode = "auto";
+        syntaxValidation = "warn";
+        timeoutMs = 120000;
+        grep = {
+          maxLines = 2000;
+          maxBytes = 51200;
+        };
+        display = {
+          grep = "compact";
+          edit = "expanded";
+          write = "expanded";
+        };
+      };
     };
   };
 }

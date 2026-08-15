@@ -21,9 +21,10 @@
 
     # --- Task Runners & Process Management ---
     mask
-    mprocs
     steam-run
     hyperfine
+    bubblewrap
+    socat
 
     # --- Development & Debugging ---
     valgrind-light
