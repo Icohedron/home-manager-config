@@ -33,7 +33,7 @@
     glow
     worktrunk
     dotenv-cli
-    hunk
+    tuicr
 
     # --- Presentations & Misc ---
     presenterm

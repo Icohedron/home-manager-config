@@ -17,34 +17,25 @@
 
   # Herdr and its plugins live in ./herdr.
 
-  programs.zellij.enable = true;
-  programs.zellij.enableZshIntegration = false;
-  programs.zellij.enableBashIntegration = false;
-  programs.zellij.settings.default_shell = "zsh";
-
-  xdg.configFile."zellij/config.kdl".text = ''
-    show_startup_tips false
-    mouse_mode true
-
-    keybinds {
-        shared_except "locked" {
-            bind "Alt g" {
-                Run "lazygit" {
-                    floating true
-                    x "10%"
-                    y "10%"
-                    width "80%"
-                    height "80%"
-                }
-            }
-        }
-    }
-  '';
-
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
   };
 
   programs.zoxide.enable = true;
+
+  xdg.configFile."tuicr/config.toml".text = ''
+    theme = "catppuccin-mocha"
+    diff_view = "side-by-side"
+    ignore_whitespace = false
+    mouse = true
+    leader = ";"
+    comment_vim = false
+    relative_line_numbers = false
+
+    [[comment_types]]
+    id = "issue"
+    color = "red"
+    definition = "must fix before merge"
+  '';
 }

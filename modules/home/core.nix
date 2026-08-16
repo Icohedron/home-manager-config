@@ -9,7 +9,6 @@
 {
   nixpkgs.overlays = [
     outputs.overlays.stable-packages
-    outputs.overlays.elf-phdr-order
   ];
   nixpkgs.config.permittedInsecurePackages = [ ];
   nixpkgs.config.allowUnfree = true;
