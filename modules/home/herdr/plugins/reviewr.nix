@@ -47,24 +47,4 @@ in
     run ${config.programs.herdr.package}/bin/herdr plugin link ${pluginRoot} >/dev/null \
       || warnEcho "herdr: could not link the reviewr plugin"
   '';
-
-  # Focus on toggle is not a setting of its own: reviewr derives it from the placement.
-  # `herdr/pane.sh` passes `--no-focus` for a `split` open and `--focus` for every other
-  # placement, on purpose (specs/herdr-host.md: "A manual open keeps focus on the agent
-  # for `split`, and gives focus to reviewr otherwise"). With no config file the default
-  # placement is `split`, which is why prefix+d left the keyboard on the agent.
-  #
-  # `zoomed` still attaches to the focused pane, so reviewr stays a real pane in the
-  # layout, but it opens focused and filling the tab; prefix+z unzooms to the familiar
-  # side-by-side view without losing focus. `overlay` and `tab` also take focus.
-  #
-  # Trade-off: the plugin's worktree.created auto-open only fires for `split` and `tab`
-  # (herdr/pane.sh), so it is inert under `zoomed`. Switch to `tab` to keep both.
-  #
-  # reviewr rejects the whole file on an unknown key or invalid value, and re-reads it on
-  # every toggle and refresh, so no herdr restart is needed after a switch.
-  xdg.configFile."herdr/plugins/config/persiyanov.reviewr/config.toml".source =
-    tomlFormat.generate "herdr-reviewr-config.toml" {
-      toggle_placement = "zoomed";
-    };
 }
