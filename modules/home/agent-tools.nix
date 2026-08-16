@@ -118,7 +118,7 @@ let
     };
   };
 
-  piSandboxConfig = (pkgs.formats.json { }).generate "sandbox.json" {
+  piLandStripConfig = (pkgs.formats.json { }).generate "pi-landlock.json" {
     enabled = true;
     shell.readAccess = "policy";
     filesystem = {
@@ -163,30 +163,10 @@ let
     network = {
       allowNetwork = false;
       allowLocalBinding = true;
-      allowAllUnixSockets = true;
+      allowAllUnixSockets = false;
+      allowedUnixSockets = [ ];
       allowedDomains = [ ];
       deniedDomains = [ ];
-    };
-  };
-
-  # Note: Let the sandbox configuration handle file permissions
-  piPermissionsConfig = (pkgs.formats.json { }).generate "config.json" {
-    permission = {
-      "*" = "allow";
-      path = {
-        "*" = "allow";
-      };
-      bash = {
-        "*" = "allow";
-        "sudo *" = "ask";
-        "herdr *" = "ask";
-        "python *" = "ask";
-        "distrobox*" = "ask";
-      };
-      read = "allow";
-      write = "allow";
-      edit = "allow";
-      external_directory = "allow";
     };
   };
 in
@@ -197,8 +177,7 @@ in
 
   home.file = {
     "${piConfigDir}/extensions/pi-tool-display/config.json".source = piToolDisplayConfig;
-    "${piConfigDir}/extensions/pi-permission-system/config.json".source = piPermissionsConfig;
-    "${piConfigDir}/sandbox.json".source = piSandboxConfig;
+    "${piConfigDir}/sandbox.json".source = piLandStripConfig;
   }
   // lib.optionalAttrs (herdrCfg.enable && herdrCfg.package != null) {
     "${piConfigDir}/extensions/herdr-agent-state.ts".source = herdrPiExtension;
@@ -229,16 +208,6 @@ in
       # pi-codegraph dependencies
       pkgs.codegraph
 
-      # pi-sandbox dependencies
-      pkgs.ripgrep
-      pkgs.bubblewrap
-      pkgs.socat
-
-      # pi-files-widget dependencies
-      pkgs.glow
-      pkgs.jq
-      pkgs.delta
-
       # tuicr skill dependencies (its Herdr wrapper is wrapped separately)
       pkgs.tuicr
     ];
@@ -248,12 +217,10 @@ in
       defaultModel = "claude-opus-5";
       defaultThinkingLevel = "high";
       packages = [
-        # Isolation and permissions
+        # Sandbox
         "npm:pi-landstrip"
-        "npm:@gotgenes/pi-permission-system"
         # Others
         "npm:pi-mcp-adapter"
-        "npm:@tmustier/pi-files-widget"
         "npm:@vndv/pi-codegraph"
         "npm:pi-simplify"
         "npm:pi-schedule-prompt"
