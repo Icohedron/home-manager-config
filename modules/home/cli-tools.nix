@@ -30,12 +30,16 @@
     ignore_whitespace = false
     mouse = true
     leader = ";"
-    comment_vim = false
+    comment_vim = true
     relative_line_numbers = false
 
-    [[comment_types]]
-    id = "issue"
-    color = "red"
-    definition = "must fix before merge"
-  '';
+    comment_types = [
+      { id = "note", definition = "note for reviewers", color = "gray" },
+      { id = "question", definition = "ask for clarification", color = "magenta" },
+      { id = "issue", definition = "problems to fix", color = "red" },
+      { id = "suggestion", definition = "possible improvements", color = "orange" },
+      { id = "nit", label = "nitpick", definition = "small optional tweaks", color = "yellow" },
+      { id = "praise", definition = "positive feedback", color = "green" },
+    ]
+    '';
 }

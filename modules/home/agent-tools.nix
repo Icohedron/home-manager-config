@@ -133,6 +133,7 @@ let
         "~/.config/git/config"
         "~/.cache/mesa_shader_cache"
         "~/.cache/shader_validation_cache-*.bin"
+        "~/.local/share/tuicr/reviews"
         "${piConfigDir}"
         # workspaces
         "~/hlsl-dev"
@@ -154,6 +155,7 @@ let
         "/tmp"
         "~/.cache/mesa_shader_cache"
         "~/.cache/shader_validation_cache-*.bin"
+        "~/.local/share/tuicr/reviews"
         # workspaces
         "~/hlsl-dev"
       ];
@@ -176,9 +178,10 @@ let
       };
       bash = {
         "*" = "allow";
-        "sudo *" = "deny";
+        "sudo *" = "ask";
         "herdr *" = "ask";
-        "distrobox*" = "deny";
+        "python *" = "ask";
+        "distrobox*" = "ask";
       };
       read = "allow";
       write = "allow";
