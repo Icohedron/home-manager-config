@@ -1,14 +1,11 @@
 # AI/agent tooling, supporting utilities, and the isolated npm setup used by pi.
-#
-# The local llama.cpp server and the Pi model entry it provides live in
-# ./llama-cpp.nix; Home Manager merges that provider into
-# programs.pi-coding-agent.models.
 {
   config,
   lib,
   pkgs,
   homeDirectory,
   npmRegistry,
+  llamaCppGPUBackend,
   ...
 }:
 let
@@ -23,6 +20,15 @@ let
       --registry ${lib.escapeShellArg npmRegistry} \
       "$@"
   '';
+
+  # llama.cpp GPU backend, selected per host from user.nix.
+  llamaCpp =
+    if llamaCppGPUBackend == "cuda" then
+      pkgs.llama-cpp.override { cudaSupport = true; }
+    else if llamaCppGPUBackend == "vulkan" then
+      pkgs.llama-cpp-vulkan
+    else
+      pkgs.llama-cpp;
 
   # Herdr (see ./herdr) only detects pi once its agent-state extension is
   # installed, which `herdr integration install pi` normally does imperatively.
@@ -192,6 +198,8 @@ in
   };
 
   home.packages = [
+    llamaCpp
+
     # pi-drawio dependencies
     pkgs.drawio
 

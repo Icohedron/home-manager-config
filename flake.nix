@@ -44,14 +44,15 @@
               ;
             inherit (user)
               username
-              homeDirectory
               gitUsername
               gitEmail
-              useWayland
-              npmRegistry
-              pypiRegistry
-              nugetRegistry
               ;
+            homeDirectory = user.homeDirectory or "/home/${user.username}";
+            useWayland = user.useWayland or true;
+            llamaCppGPUBackend = user.llamaCppGPUBackend or "vulkan";
+            npmRegistry = user.npmRegistry or "https://registry.npmjs.org/";
+            pypiRegistry = user.pypiRegistry or "https://pypi.org/simple/";
+            nugetRegistry = user.nugetRegistry or "https://api.nuget.org/v3/index.json";
           };
           modules = [
             ./home.nix

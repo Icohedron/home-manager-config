@@ -1,6 +1,7 @@
 # Default package registries for npm, PyPI, and NuGet, applied globally.
 #
-# The registry URLs are provided per-user from user.nix. This module writes the
+# The registry URLs are provided per-user from user.nix, which may omit them;
+# flake.nix then falls back to the public registries. This module writes the
 # canonical global config files for each tool and also exports the matching
 # environment variables so CLIs that prefer env config (npm, pip, uv) pick them
 # up as well.

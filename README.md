@@ -5,7 +5,7 @@ This repository provides a declarative, reproducible system configuration for Li
 ## Structure
 
 * `flake.nix`: The entry point defining the inputs (Nixpkgs, Home Manager) and output configurations.
-* `user.nix`: A centralized file containing your user details (username, home directory, git configuration).
+* `user.nix`: A centralized file containing your user details (username, home directory, git configuration, llama.cpp GPU backend, package registries).
 * `home.nix`: A thin Home Manager entrypoint that imports the module collection under `modules/home/`.
 * `modules/home/`: Self-contained modules grouped by concern (`core`, `shell`, `editors`, `vcs`, `agent-tools`, `llama-cpp`, etc.).
 * `maskfile.md`: A task runner for managing the configuration.
@@ -30,17 +30,31 @@ git clone https://github.com/Icohedron/Home-Manager-Config.git ~/nix
 cd ~/nix
 ```
 
-**Important:** Before applying the configuration, you must update `users.nix` with your specific details:
+**Important:** Before applying the configuration, you must update `user.nix` with your specific details. Only `username`, `gitUsername`, and `gitEmail` are required; every other key is optional and falls back to the default declared in `flake.nix`:
 
 ```nix
-# Edit ~/nix/users.nix
+# Edit ~/nix/user.nix
 {
   username = "your-username";
-  homeDirectory = "/home/your-username"; # Update to your actual home directory
+  homeDirectory = "/home/your-username"; # Optional. Defaults to /home/<username>
+
   gitUsername = "Your Name";
   gitEmail = "your.email@example.com";
-  useWayland = true;
-  npmRegistry = "https://registry.npmjs.org/"; # Per-user npm registry for pi package installs
+
+  # Whether to use wayland or x11 applications
+  useWayland = true; # Optional. Defaults to true
+
+  # Optional. GPU backend llama.cpp is built against (see modules/home/agent-tools.nix):
+  #   "cuda"   - NVIDIA GPU, builds llama.cpp with cudaSupport
+  #   "vulkan" - any GPU with a native Vulkan driver (default)
+  #   "cpu"    - no GPU offload
+  llamaCppGPUBackend = "vulkan";
+
+  # Optional per-user package registries (see modules/home/registries.nix).
+  # Omit any of them to keep the public defaults shown here.
+  npmRegistry = "https://registry.npmjs.org/";
+  pypiRegistry = "https://pypi.org/simple/";
+  nugetRegistry = "https://api.nuget.org/v3/index.json";
 }
 ```
 
@@ -134,10 +148,20 @@ auto-registered entry loads with llama.cpp defaults, including a far smaller
 context window.
 
 > [!NOTE]
-> The service uses `pkgs.llama-cpp-vulkan`, which drives an AMD/Intel/NVIDIA GPU
-> through Vulkan and silently falls back to CPU-only inference when no Vulkan
-> device is visible. Inside a container, that requires `/dev/dri` to be passed
-> through and readable; check with `llama-server --list-devices`.
+> The llama.cpp package is built for the backend named by `llamaCppGPUBackend`
+> in `user.nix`: `"cuda"` builds `pkgs.llama-cpp` with `cudaSupport`, `"vulkan"`
+> uses `pkgs.llama-cpp-vulkan`, and anything else (`"cpu"`) is the plain CPU
+> build. Every variant silently falls back to CPU-only inference when no usable
+> device is visible; check with `llama-server --list-devices`.
+>
+> Pick `"vulkan"` only where a native Vulkan driver exists. Inside a container
+> that means `/dev/dri` must be passed through and readable, and under WSL2 the
+> NVIDIA driver ships no Vulkan ICD at all, so the only Vulkan device is Mesa's
+> non-conformant Dozen (Vulkan-on-D3D12) layer — use `"cuda"` there.
+>
+> On non-NixOS hosts a CUDA build also needs `libcuda.so.1` on the loader path,
+> because Nix's glibc ignores the system `/etc/ld.so.cache`. Under WSL2 the
+> driver lives in `/usr/lib/wsl/lib`.
 
 ### Using the model from Pi
 
