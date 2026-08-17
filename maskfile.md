@@ -132,3 +132,11 @@ echo "run 'mask build' to apply"
 llama serve -hf "unsloth/Qwen3.6-35B-A3B-GGUF" -c 262144 -cmoe
 ~~~
 
+### wsl-start
+
+> Starts the llama.cpp server on WSL
+
+~~~sh
+LD_LIBRARY_PATH=/usr/lib/wsl/lib llama serve -hf "unsloth/Qwen3.6-35B-A3B-GGUF" -c 262144 -cmoe
+~~~
+
