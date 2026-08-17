@@ -191,6 +191,17 @@ in
     };
   };
 
+  home.packages = [
+    # pi-drawio dependencies
+    pkgs.drawio
+
+    # pi-codegraph dependencies
+    pkgs.codegraph
+
+    # tuicr skill dependencies (its Herdr wrapper is wrapped separately)
+    pkgs.tuicr
+  ];
+
   programs.pi-coding-agent = {
     enable = true;
     package = pkgs.pi-coding-agent;
@@ -201,15 +212,6 @@ in
       # General nodejs dependencies
       pkgs.nodejs
       pkgs.bun
-
-      # pi-drawio dependencies
-      pkgs.drawio
-
-      # pi-codegraph dependencies
-      pkgs.codegraph
-
-      # tuicr skill dependencies (its Herdr wrapper is wrapped separately)
-      pkgs.tuicr
     ];
     settings = {
       npmCommand = [ "${piNpmWrapper}/bin/pi-npm" ];
