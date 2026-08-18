@@ -112,6 +112,29 @@ let
           --prefix PATH : "$wrapperPath"
       '';
 
+  # CodeGraph (queried by the pi-codegraph extension) ships opt-out telemetry:
+  # it posts anonymous usage counters to telemetry.getcodegraph.com and polls
+  # the release feed to advertise upgrades. The upstream opt-out
+  # (`codegraph telemetry off`) records the choice in ~/.codegraph/telemetry.json,
+  # i.e. mutable state outside this configuration, so the environment overrides
+  # are baked into the wrapper instead. They sit above the stored config in
+  # CodeGraph's own precedence order
+  # (DO_NOT_TRACK > CODEGRAPH_TELEMETRY > telemetry.json > default on) and are
+  # inherited by the `codegraph serve --mcp` child and its background daemons.
+  # The update check is disabled with the same wrapper because nixpkgs pins the
+  # version: the notice cannot be acted on, and it is injected into the MCP
+  # initialize instructions the agent reads.
+  codegraph = pkgs.symlinkJoin {
+    name = "codegraph-${pkgs.codegraph.version}-no-telemetry";
+    paths = [ pkgs.codegraph ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram "$out/bin/codegraph" \
+        --set CODEGRAPH_TELEMETRY 0 \
+        --set CODEGRAPH_NO_UPDATE_CHECK 1
+    '';
+  };
+
   piToolDisplayConfig = (pkgs.formats.json { }).generate "config.json" {
     registerToolOverrides = {
       "write" = false;
@@ -202,8 +225,8 @@ in
     # pi-drawio dependencies
     pkgs.drawio
 
-    # pi-codegraph dependencies
-    pkgs.codegraph
+    # pi-codegraph dependencies (telemetry/update checks disabled above)
+    codegraph
 
     # tuicr skill dependencies (its Herdr wrapper is wrapped separately)
     pkgs.tuicr
