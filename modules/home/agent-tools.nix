@@ -170,7 +170,6 @@ let
       allowNetwork = false;
       allowLocalBinding = true;
       allowAllUnixSockets = false;
-      allowedUnixSockets = [ ];
       allowedDomains = [ ];
       deniedDomains = [ ];
     };
