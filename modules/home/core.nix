@@ -9,6 +9,7 @@
 {
   nixpkgs.overlays = [
     outputs.overlays.stable-packages
+    outputs.overlays.tuicr-pr600
   ];
   nixpkgs.config.permittedInsecurePackages = [ ];
   nixpkgs.config.allowUnfree = true;
