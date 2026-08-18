@@ -278,8 +278,8 @@ in
       };
       models = [
         {
-          id = "Qwen3.6-35B-A3B";
-          name = "Qwen3.6 35B A3B (local llama.cpp)";
+          id = "unsloth/Qwen3.6-35B-A3B-MTP-GGUF:UD-Q4_K_XL";
+          name = "Unsloth Qwen3.6-35B-A3B MTP (UD-Q4_K_XL)";
           reasoning = true;
           input = [
             "text"
@@ -288,7 +288,7 @@ in
           # 262144 token context size: the native context length of Qwen3.6.
           contextWindow = 262144;
           # Qwen recommends 32K output for normal use and 81920 for hard problems.
-          maxTokens = 81920;
+          maxTokens = 32768;
           cost = {
             input = 0;
             output = 0;
