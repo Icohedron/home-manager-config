@@ -34,12 +34,12 @@
     relative_line_numbers = false
 
     comment_types = [
-      { id = "note", definition = "note for reviewers", color = "gray" },
-      { id = "question", definition = "ask for clarification", color = "magenta" },
-      { id = "issue", definition = "problems to fix", color = "red" },
-      { id = "suggestion", definition = "possible improvements", color = "orange" },
-      { id = "nit", label = "nitpick", definition = "small optional tweaks", color = "yellow" },
-      { id = "praise", definition = "positive feedback", color = "green" },
+      { id = "note", definition = "note for reviewers", color = "#b2b2b2" },
+      { id = "question", definition = "ask for clarification", color = "#a7ecf3" },
+      { id = "issue", definition = "problems to fix", color = "#f61a1a" },
+      { id = "suggestion", definition = "possible improvements", color = "#f6972a" },
+      { id = "nit", label = "nitpick", definition = "small optional tweaks", color = "#f7f12a" },
+      { id = "praise", definition = "positive feedback", color = "#25f230" },
     ]
     '';
 }
