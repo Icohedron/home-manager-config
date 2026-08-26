@@ -9,7 +9,6 @@
 {
   nixpkgs.overlays = [
     outputs.overlays.stable-packages
-    outputs.overlays.tuicr-pin
   ];
   nixpkgs.config.permittedInsecurePackages = [ ];
   nixpkgs.config.allowUnfree = true;

@@ -11,7 +11,6 @@
     ./agent-tools.nix
     ./shell.nix
     ./cli-tools.nix
-    ./herdr
     ./vcs.nix
     ./editors.nix
     ./ssh-services.nix

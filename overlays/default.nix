@@ -7,8 +7,4 @@
       config.allowUnfree = true;
     };
   };
-
-  # Builds `pkgs.tuicr` from the upstream v0.23.1 release rather than the older
-  # release packaged in nixpkgs. See ./tuicr-pin for what is pinned and why.
-  tuicr-pin = import ./tuicr-pin;
 }

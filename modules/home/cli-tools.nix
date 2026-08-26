@@ -15,7 +15,14 @@
     shellWrapperName = "y";
   };
 
-  # Herdr and its plugins live in ./herdr.
+  programs.herdr = {
+    enable = true;
+    settings = {
+      onboarding = false;
+      terminal.default_shell = "zsh";
+      session.resume_agents_on_restore = true;
+    };
+  };
 
   programs.direnv = {
     enable = true;
