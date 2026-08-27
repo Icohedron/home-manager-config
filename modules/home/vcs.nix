@@ -25,8 +25,6 @@
       merge.conflictstyle = "zdiff3";
       commit.gpgsign = true;
       gpg.format = "ssh";
-
-      http.proxyAuthMethod = "basic";
     };
     signing.format = null;
   };
