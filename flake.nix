@@ -1,63 +1,43 @@
 {
-  description = "Nix flake for personal system configuration";
+  description = "Dendritic Home Manager configuration built with flake-parts";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.11";
+
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    import-tree.url = "github:denful/import-tree";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
+  # =========================================================================
+  # DENDRITIC PATTERN
+  # =========================================================================
+  # Every *.nix file below ./system and ./features is a flake-parts module,
+  # imported automatically by import-tree. There is no central list of imports
+  # to maintain: dropping a file into ./features/<name>/ is enough to add it.
+  #
+  #   ./system   - machine/system configuration and hardware-specific packages
+  #   ./features - one self-contained directory per program or feature
+  #
+  # Files whose path contains "/_" are ignored by import-tree, so helper data
+  # can live next to a feature without being evaluated as a module.
+  # =========================================================================
   outputs =
-    {
-      self,
-      nixpkgs,
-      home-manager,
-      ...
-    }@inputs:
-    let
-      inherit (self) outputs;
-      system = "x86_64-linux";
-      # =====================================================================
-      # USER CONFIGURATION
-      # =====================================================================
-      # Edit user.nix to match your system and personal details.
-      # You may want to use `git update-index --assume-unchanged user.nix`
-      # to make git assume this file remains unchanged.
-      user = import ./user.nix;
-      # =====================================================================
-    in
-    {
-      overlays = import ./overlays { inherit inputs; };
-      homeConfigurations = {
-        ${user.username} = home-manager.lib.homeManagerConfiguration {
-          pkgs = import nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-          };
-          extraSpecialArgs = {
-            inherit
-              inputs
-              outputs
-              ;
-            inherit (user)
-              username
-              gitUsername
-              gitEmail
-              ;
-            homeDirectory = user.homeDirectory or "/home/${user.username}";
-            useWayland = user.useWayland or true;
-            llamaCppGPUBackend = user.llamaCppGPUBackend or "vulkan";
-            npmRegistry = user.npmRegistry or "https://registry.npmjs.org/";
-            pypiRegistry = user.pypiRegistry or "https://pypi.org/simple/";
-            nugetRegistry = user.nugetRegistry or "https://api.nuget.org/v3/index.json";
-          };
-          modules = [
-            ./home.nix
-          ];
-        };
-      };
+    inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        # Provides `flake.modules.<class>.<name>`, the option every feature
+        # publishes itself through.
+        inputs.flake-parts.flakeModules.modules
+        (inputs.import-tree [
+          ./system
+          ./features
+        ])
+      ];
     };
 }

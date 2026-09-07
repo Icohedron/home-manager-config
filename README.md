@@ -1,14 +1,75 @@
 # Home Manager Generic Configuration
 
-This repository provides a declarative, reproducible system configuration for Linux systems using [Nix Flakes](https://nixos.wiki/wiki/Flakes) and [Home Manager](https://nix-community.github.io/home-manager/).
+This repository provides a declarative, reproducible system configuration for Linux systems using [Nix Flakes](https://nixos.wiki/wiki/Flakes), [flake-parts](https://flake.parts) and [Home Manager](https://nix-community.github.io/home-manager/).
+
+It follows the [dendritic pattern](https://github.com/mightyiam/dendritic): **every `.nix` file in the repository is a flake-parts module**, and all of them are imported automatically by [import-tree](https://github.com/denful/import-tree). There is no central list of imports to maintain — creating a file is enough to add it to the configuration.
 
 ## Structure
 
-* `flake.nix`: The entry point defining the inputs (Nixpkgs, Home Manager) and output configurations.
-* `user.nix`: A centralized file containing your user details (username, home directory, git configuration, llama.cpp GPU backend, package registries).
-* `home.nix`: A thin Home Manager entrypoint that imports the module collection under `modules/home/`.
-* `modules/home/`: Self-contained modules grouped by concern (`core`, `shell`, `editors`, `vcs`, `agent-tools`, `llama-cpp`, etc.).
-* `maskfile.md`: A task runner for managing the configuration.
+```
+flake.nix          entry point: inputs + `import-tree [ ./system ./features ]`
+user.nix           your personal details (the only file you must edit)
+system/            machine configuration and hardware-specific packages
+features/          one self-contained directory per program or feature
+maskfile.md        task runner for managing the configuration
+```
+
+### `system/`
+
+| File | Purpose |
+|---|---|
+| `settings.nix` | Declares the `user.*` options and loads `../user.nix` into them |
+| `hardware.nix` | Machine facts Nix can't detect (`hardware.wayland`, `hardware.gpuBackend`) and hardware-specific packages |
+| `nixpkgs.nix` | Supported platforms (`systems`) and the package set (`allowUnfree`) every module evaluates against |
+| `overlays.nix` | Nixpkgs overlays published by the flake (`pkgs.stable`) |
+| `home.nix` | Core Home Manager module: Nix settings, state version, user/home paths |
+| `configurations.nix` | Assembles `homeConfigurations` (one per supported platform) from `core`, `hardware` and `workstation` |
+| `checks.nix` | `nix fmt` formatter and the `nix flake check` build |
+
+### `features/`
+
+Every subdirectory is **one program** - one binary, one feature directory. No
+bundles: `zip`, `unzip` and `p7zip` are three features, not one "archives"
+feature, so any of them can be added or dropped on its own.
+
+A feature owns *everything* about its program: the package, its configuration,
+its data files, and its integrations with other tools. For example
+`features/worktrunk/` holds the package *and* its zsh, bash and nushell
+snippets; `features/tuicr/` holds the package *and* its `config.toml`; and
+`features/delta/` holds the pager *and* the `[delta]` section it needs in
+Git's config.
+
+A few directories legitimately install nothing: `features/ssh/` only writes
+`~/.ssh/config` (the binary comes from the system), `features/clangd/` only
+points the editors at a language server, and `features/shell/` and
+`features/registries/` are pure configuration.
+
+A feature file looks like this:
+
+```nix
+# features/bat/default.nix
+{ config, ... }:
+{
+  # 1. Publish the feature as a named Home Manager module.
+  flake.modules.homeManager.bat = {
+    programs.bat.enable = true;
+  };
+
+  # 2. Register it in the profile this machine builds.
+  flake.modules.homeManager.workstation.imports = [ config.flake.modules.homeManager.bat ];
+}
+```
+
+Because features publish themselves as `flake.modules.homeManager.<name>`, they
+are also exported by the flake and can be reused elsewhere. Dropping the second
+line keeps a feature in the repository without installing it.
+
+Larger features may split across several files in their directory — they all
+extend the same module. See `features/pi-coding-agent/`, which is split into
+`default.nix`, `sandbox.nix`, `integrations.nix` and `models.nix`.
+
+Files and directories whose name starts with `_` are ignored by `import-tree`,
+so helper data can live next to a feature without being evaluated as a module.
 
 ## Getting Started
 
@@ -30,7 +91,7 @@ git clone https://github.com/Icohedron/Home-Manager-Config.git ~/nix
 cd ~/nix
 ```
 
-**Important:** Before applying the configuration, you must update `user.nix` with your specific details. Only `username`, `gitUsername`, and `gitEmail` are required; every other key is optional and falls back to the default declared in `flake.nix`:
+**Important:** Before applying the configuration, you must update `user.nix` with your specific details. Only `username`, `gitUsername`, and `gitEmail` are required; every other key is optional and falls back to the default declared in `system/settings.nix`:
 
 ```nix
 # Edit ~/nix/user.nix
@@ -41,16 +102,27 @@ cd ~/nix
   gitUsername = "Your Name";
   gitEmail = "your.email@example.com";
 
+  # Optional. Private SSH keys keychain loads into the ssh-agent at shell
+  # startup (see features/ssh). Names are relative to ~/.ssh; absolute paths
+  # also work. Defaults to [ ], which leaves keychain disabled entirely.
+  sshKeys = [ "id_ed25519" ];
+
+  # Optional. Commit signing for Git and Jujutsu (see features/git,
+  # features/jujutsu). Declaring a key switches signing on; add
+  # `enable = false;` to keep the key but stop signing. Defaults to no key,
+  # and therefore no signing at all.
+  commitSigning.key = "~/.ssh/id_ed25519.pub";
+
   # Whether to use wayland or x11 applications
   useWayland = true; # Optional. Defaults to true
 
-  # Optional. GPU backend llama.cpp is built against (see modules/home/agent-tools.nix):
+  # Optional. GPU backend llama.cpp is built against (see system/hardware.nix):
   #   "cuda"   - NVIDIA GPU, builds llama.cpp with cudaSupport
   #   "vulkan" - any GPU with a native Vulkan driver (default)
   #   "cpu"    - no GPU offload
   llamaCppGPUBackend = "vulkan";
 
-  # Optional per-user package registries (see modules/home/registries.nix).
+  # Optional per-user package registries (see features/registries).
   # Omit any of them to keep the public defaults shown here.
   npmRegistry = "https://registry.npmjs.org/";
   pypiRegistry = "https://pypi.org/simple/";
@@ -84,75 +156,78 @@ Once configured, you can build and switch to your new Home Manager environment:
 home-manager switch --flake . --experimental-features 'nix-command flakes'
 ```
 
+#### Platforms
+
+Nothing in this repository declares which machine it is running on — Nix cannot
+know that during pure flake evaluation. Instead, `system/nixpkgs.nix` lists the
+platforms the configuration supports, and `system/configurations.nix` builds one
+configuration for each:
+
+```
+homeConfigurations."<user>@x86_64-linux"
+homeConfigurations."<user>@aarch64-linux"
+homeConfigurations."<user>"              # alias, for `home-manager switch --flake .`
+```
+
+The bare alias resolves to `builtins.currentSystem` when the flake is evaluated
+impurely, and otherwise falls back to the first supported platform. So on a
+non-x86 machine use any of:
+
+```bash
+mask build                                   # detects the platform for you
+home-manager switch --flake . --impure       # resolves the alias to this machine
+home-manager switch --flake .#"$USER@aarch64-linux"
+```
+
+Supporting another platform is one line in `system/nixpkgs.nix`; features that
+are not portable should gate their packages themselves (this is why `steam-run`,
+which pulls in the i686 package set, is not installed).
+
 ## Managing Your Setup (using `mask`)
 
 Once installed, your environment includes a task runner called `mask`. You can use it to easily manage your configuration. Simply run `mask` in your `~/nix` directory to see available commands:
 
 * `mask build` - Rebuild and apply the current configuration.
-* `mask check` - Dry-run build and evaluate the flake to ensure there are no errors.
-* `mask format` - Formats all Nix files in the repository using `nixfmt`.
+* `mask check` - Evaluate and dry-run build the flake to ensure there are no errors.
+* `mask format` - Format every Nix file in the repository (`nix fmt`, which runs `nixfmt`).
 * `mask update` - Update `flake.lock` with the latest package versions.
 * `mask clean` - Run the Nix garbage collector to free up disk space.
 
+## Adding Things
+
+* **A new program**: create `features/<name>/default.nix` using the template
+  above, named after the binary it installs. Keep its packages, configuration
+  files and shell snippets in that directory.
+* **A machine-specific choice** (GPU stack, display server): add
+  or override an option in `system/hardware.nix` and consume it from the feature
+  that cares about it.
+* **A new user setting**: declare the option in `system/settings.nix`, then set
+  it in `user.nix`.
+
 ## Local Models with llama.cpp
 
-`modules/home/llama-cpp.nix` runs [llama.cpp](https://github.com/ggml-org/llama.cpp)
-as a systemd user service in *router mode*, so a single OpenAI-compatible
-endpoint on `http://127.0.0.1:8080` can load and unload models on demand.
+`features/llama-cpp/` installs [llama.cpp](https://github.com/ggml-org/llama.cpp),
+built for the backend named by `llamaCppGPUBackend` in `user.nix` (surfaced as
+`hardware.gpuBackend` in `system/hardware.nix`):
 
-Models are declared in an INI preset generated from Nix. Each section becomes a
-router-visible model id, and each key is a `llama-server` flag without its
-leading dashes. The preset currently ships one model:
+* `"cuda"` builds `pkgs.llama-cpp` with `cudaSupport`
+* `"vulkan"` uses `pkgs.llama-cpp-vulkan`
+* `"cpu"` is the plain CPU build
 
-| | |
-|---|---|
-| Model id | `Qwen3.6-35B-A3B` |
-| Weights | [`unsloth/Qwen3.6-35B-A3B-GGUF`](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF), quantization `UD-Q3_K_XL` (~16.9 GB) |
-| Context window | 262144 tokens (256K, the model's native maximum) |
-| KV cache | `q8_0` with flash attention (~2.6 GB at full context) |
-| VRAM budget | 12 GB |
-
-About 91% of this model is mixture-of-experts weight, so it does not fit in
-12 GB at any quantization. The preset instead spends VRAM on the KV cache and
-the dense layers and lets llama.cpp's `--fit` logic overflow expert tensors into
-system RAM; only ~3B parameters are active per token, so CPU-side experts stay
-workable. That also means the quantization is bounded by system RAM rather than
-VRAM — `UD-Q4_K_XL` (~22.4 GB) is the upgrade if there is RAM to spare.
-
-> [!IMPORTANT]
-> The preset pins `ctx-size` explicitly, and that is load-bearing. llama.cpp
-> only auto-shrinks the context to fit VRAM when it was left unset, so removing
-> that line would silently give you a 4096-token window instead of offloading
-> more weights.
-
-Weights are **not** downloaded at build time. The router fetches them from
-Hugging Face into `~/.cache/llama.cpp` the first time the model is requested,
-and releases the memory again after 15 idle minutes. Expect the first request to
-take a while.
-
-Useful commands:
+The server is started on demand rather than as a service:
 
 ```bash
-mask llama status     # service state and the model ids the router advertises
-mask llama logs       # load/download progress
-mask llama download   # fetch the weights ahead of time, with a progress bar
-mask llama start|stop|restart
+mask llama start       # llama-server with the tuned Qwen3.6 flags
+mask llama wsl-start   # same, with the WSL driver path exported
 ```
 
-Every model is declared in the module's preset and pulled with `hf-repo`;
-there is no scan directory. Note that llama.cpp separately auto-registers
-anything already sitting in `~/.cache/llama.cpp`, so `/v1/models` lists the
-cached weights a second time under their bare `repo:quant` id. Only the
-preset id (`Qwen3.6-35B-A3B`) carries the tuning described above — the
-auto-registered entry loads with llama.cpp defaults, including a far smaller
-context window.
+Weights are **not** downloaded at build time; `llama-server` fetches them from
+Hugging Face into `~/.cache/llama.cpp` on first use, so expect the first request
+to take a while.
 
 > [!NOTE]
-> The llama.cpp package is built for the backend named by `llamaCppGPUBackend`
-> in `user.nix`: `"cuda"` builds `pkgs.llama-cpp` with `cudaSupport`, `"vulkan"`
-> uses `pkgs.llama-cpp-vulkan`, and anything else (`"cpu"`) is the plain CPU
-> build. Every variant silently falls back to CPU-only inference when no usable
-> device is visible; check with `llama-server --list-devices`.
+> Every variant silently falls back to CPU-only inference when no usable device
+> is visible; check with `llama-server --list-devices`.
 >
 > Pick `"vulkan"` only where a native Vulkan driver exists. Inside a container
 > that means `/dev/dri` must be passed through and readable, and under WSL2 the
@@ -165,14 +240,12 @@ context window.
 
 ### Using the model from Pi
 
-The same module registers the model with Pi Coding Agent by merging a provider
-into `programs.pi-coding-agent.models`, which Home Manager writes to
-`~/.pi/agent/models.json`. Select it in Pi with `/model` and pick
-**Qwen3.6 35B A3B (local llama.cpp)**.
-
-`LLAMA_BASE_URL` is exported as well, so Pi's built-in `/llama` command can list,
-load, unload, and download router models without running `/login llama.cpp`
-first.
+`features/pi-coding-agent/models.nix` registers the local endpoint with the Pi
+Coding Agent by declaring a `llama.cpp-custom` provider, which Home Manager
+writes to `~/.pi/agent/models.json`. Pi's built-in llama.cpp provider reports
+every router model as non-reasoning, so the model is declared explicitly there
+to enable thinking and vision and to pin the real 262144-token context window.
+Select it in Pi with `/model`.
 
 ## Using Zsh
 

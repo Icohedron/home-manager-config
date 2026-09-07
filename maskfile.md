@@ -5,7 +5,8 @@
 > Rebuilds and applies the home-manager configuration using the current flake.lock
 
 ~~~sh
-home-manager switch --flake .
+system="$(nix eval --raw --impure --expr builtins.currentSystem)"
+home-manager switch --flake ".#$USER@$system"
 ~~~
 
 ## check
@@ -13,16 +14,17 @@ home-manager switch --flake .
 > Performs a dry-run build and evaluates the flake to ensure there are no errors
 
 ~~~sh
+system="$(nix eval --raw --impure --expr builtins.currentSystem)"
 nix flake check
-nix build .#homeConfigurations."$USER".activationPackage --dry-run
+nix build ".#homeConfigurations.\"$USER@$system\".activationPackage" --dry-run
 ~~~
 
 ## format
 
-> Formats all Nix files in the repository using nixfmt
+> Formats all Nix files in the repository using nixfmt (via the flake formatter)
 
 ~~~sh
-find . -type f -name "*.nix" -exec nixfmt {} +
+nix fmt
 ~~~
 
 ## update
