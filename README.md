@@ -225,17 +225,50 @@ Once installed, your environment includes a task runner called `mask`. You can u
 
 `features/podman.nix` installs podman whenever `hardware.containerEngine` is
 `"podman"`, and `features/devcontainer.nix` points the devcontainer CLI at it.
-Home Manager writes podman's configuration into `~/.config/containers`, but not
-the subordinate id ranges in `/etc/subuid` and `/etc/subgid`: those live outside
-your profile, and without them podman maps a single id, which is too few to run
-a container as anything but root. See podman's
-[rootless tutorial](https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/rootless_tutorial.md)
-for how to set them up.
+Home Manager cannot write `/etc/subuid` and `/etc/subgid`, and without those
+podman maps a single id, so containers run as root or not at all.
 
-Inside a distrobox/toolbox container two extra things apply: the range has to
-fit the ids the parent namespace mapped in (`cat /proc/self/uid_map`), and
-`/etc` belongs to the image, so the setup has to be redone after the container
-is recreated.
+**1. Check.** Count the ids podman can actually map - an entry may exist and
+still be unusable, because it is too small, contains your own uid, or names ids
+this machine does not have. Nothing to do if this reports 65534 or more:
+
+```bash
+podman unshare cat /proc/self/uid_map | awk '$1 != 0 { n += $3 } END { print n+0 }'
+```
+
+**2. Grant a range.** On a normal machine:
+
+```bash
+sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$USER"
+```
+
+Inside a distrobox/toolbox container that range does not exist - you only have
+the 65536 ids the container itself was given, and podman refuses a range
+containing your own uid - so use everything else, split around yourself:
+
+```bash
+sudo tee /etc/subuid /etc/subgid >/dev/null <<EOF
+$USER:1:999
+$USER:1001:64535
+EOF
+sudo setcap cap_setuid+ep /usr/bin/newuidmap   # podman calls these to write the
+sudo setcap cap_setgid+ep /usr/bin/newgidmap   # map; images lose their filecaps
+```
+
+**3. Apply and verify.** The map should list the ranges you granted:
+
+```bash
+podman system migrate
+podman unshare cat /proc/self/uid_map
+```
+
+Use the whole span: the range must reach id 65534, or `apt` and anything else
+that drops privileges fails with `setgroups 65534 failed`. After changing
+ranges run `podman system reset`, since images unpacked under the old mapping
+become unusable. In a container `/etc` belongs to the image, so this has to be
+redone whenever the container is recreated. Podman's
+[rootless tutorial](https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/rootless_tutorial.md)
+explains the underlying mechanism.
 
 ## Local Models with llama.cpp
 
