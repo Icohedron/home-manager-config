@@ -1,6 +1,6 @@
 # Default package registries for npm, PyPI, and NuGet, applied globally.
 #
-# The registry URLs come from ../../user.nix (see system/settings.nix for the
+# The registry URLs come from ../user.nix (see system/settings.nix for the
 # defaults). This feature writes the canonical global config file for each tool
 # and also exports the matching environment variables, so CLIs that prefer env
 # config (npm, pip, uv) pick them up as well.

@@ -16,8 +16,8 @@
     let
       piConfigDir = config.programs.pi-coding-agent.configDir;
 
-      # Herdr (see ../herdr) only detects pi once its agent-state extension is
-      # installed, which `herdr integration install pi` normally does
+      # Herdr (see ../herdr.nix) only detects pi once its agent-state extension
+      # is installed, which `herdr integration install pi` normally does
       # imperatively. Instead, run that same command at build time against a
       # throwaway HOME and capture the generated extension, so Home Manager can
       # link it declaratively. The extension stays in sync with whatever herdr
@@ -35,7 +35,7 @@
             cp "$HOME/.pi/agent/extensions/herdr-agent-state.ts" "$out"
           '';
 
-      # tuicr (see ../tuicr) ships an agent skill in its source tree. nixpkgs
+      # tuicr (see ../tuicr/) ships an agent skill in its source tree. nixpkgs
       # builds the binary from that same source, so derive the skill from
       # `pkgs.tuicr.src` rather than vendoring a copy: it always matches the
       # installed tuicr version, exactly like the herdr extension above.

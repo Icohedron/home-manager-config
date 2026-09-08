@@ -2,7 +2,7 @@
 #
 # Pi's built-in llama.cpp provider reports every router model as non-reasoning,
 # so the model is declared explicitly here to enable thinking and vision and to
-# pin the real context window. The server itself comes from ../llama-cpp.
+# pin the real context window. The server itself comes from ../llama-cpp.nix.
 { ... }:
 {
   flake.modules.homeManager.pi-coding-agent = {

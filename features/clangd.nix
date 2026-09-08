@@ -1,8 +1,8 @@
 # clangd - C/C++ language server.
 #
 # clangd is shared by every editor here, so its build and the editor wiring live
-# together: ../helix and ../zed-editor stay free of toolchain details, and both
-# always point at the exact same clangd.
+# together: ./helix/ and ./zed-editor.nix stay free of toolchain details, and
+# both always point at the exact same clangd.
 { config, ... }:
 {
   flake.modules.homeManager.clangd =

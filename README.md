@@ -10,7 +10,7 @@ It follows the [dendritic pattern](https://github.com/mightyiam/dendritic): **ev
 flake.nix          entry point: inputs + `import-tree [ ./system ./features ]`
 user.nix           your personal details (the only file you must edit)
 system/            machine configuration and hardware-specific packages
-features/          one self-contained directory per program or feature
+features/          one self-contained file (or directory) per program
 maskfile.md        task runner for managing the configuration
 ```
 
@@ -28,26 +28,43 @@ maskfile.md        task runner for managing the configuration
 
 ### `features/`
 
-Every subdirectory is **one program** - one binary, one feature directory. No
-bundles: `zip`, `unzip` and `p7zip` are three features, not one "archives"
-feature, so any of them can be added or dropped on its own.
+Every entry is **one program** - one binary, one feature. No bundles: `zip`,
+`unzip` and `p7zip` are three features, not one "archives" feature, so any of
+them can be added or dropped on its own.
+
+Most features need nothing but a single file, so they are one:
+
+```
+features/bat.nix
+features/ripgrep.nix
+features/zip.nix
+```
+
+A feature only becomes a directory when it has something to keep next to it -
+`import-tree` walks the whole tree, so `default.nix` carries no special meaning
+and nesting costs nothing:
+
+```
+features/tuicr/            default.nix + config.toml
+features/helix/            default.nix + hlsl-queries/*.scm
+features/pi-coding-agent/  default.nix, sandbox.nix, integrations.nix, models.nix
+```
 
 A feature owns *everything* about its program: the package, its configuration,
 its data files, and its integrations with other tools. For example
-`features/worktrunk/` holds the package *and* its zsh, bash and nushell
-snippets; `features/tuicr/` holds the package *and* its `config.toml`; and
-`features/delta/` holds the pager *and* the `[delta]` section it needs in
-Git's config.
+`features/worktrunk.nix` holds the package *and* its zsh, bash and nushell
+snippets, and `features/delta.nix` holds the pager *and* the `[delta]` section
+it needs in Git's config.
 
-A few directories legitimately install nothing: `features/ssh/` only writes
-`~/.ssh/config` (the binary comes from the system), `features/clangd/` only
-points the editors at a language server, and `features/shell/` and
-`features/registries/` are pure configuration.
+A few features legitimately install nothing: `features/ssh.nix` only writes
+`~/.ssh/config` (the binary comes from the system), `features/clangd.nix` only
+points the editors at a language server, and `features/shell.nix` and
+`features/registries.nix` are pure configuration.
 
 A feature file looks like this:
 
 ```nix
-# features/bat/default.nix
+# features/bat.nix
 { config, ... }:
 {
   # 1. Publish the feature as a named Home Manager module.
@@ -195,9 +212,9 @@ Once installed, your environment includes a task runner called `mask`. You can u
 
 ## Adding Things
 
-* **A new program**: create `features/<name>/default.nix` using the template
-  above, named after the binary it installs. Keep its packages, configuration
-  files and shell snippets in that directory.
+* **A new program**: create `features/<name>.nix` using the template above,
+  named after the binary it installs. Promote it to `features/<name>/` only
+  when it needs data files or grows into several modules.
 * **A machine-specific choice** (GPU stack, display server): add
   or override an option in `system/hardware.nix` and consume it from the feature
   that cares about it.

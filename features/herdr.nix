@@ -5,7 +5,7 @@
     { config, lib, ... }:
     let
       # herdr spawns this command for every pane it opens. Don't hardcode zsh:
-      # if ../zsh is ever unregistered, the shell would not be installed and
+      # if ./zsh.nix is ever unregistered, the shell would not be installed and
       # herdr would quietly drop back to /bin/sh. Pick the first shell this
       # configuration actually enables instead, and if none of them is enabled,
       # leave the key out entirely so herdr keeps using $SHELL.

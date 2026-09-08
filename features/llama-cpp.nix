@@ -2,7 +2,7 @@
 #
 # The build variant follows the GPU stack declared in system/hardware.nix. The
 # pi provider that talks to this server is declared in
-# ../pi-coding-agent/models.nix, since it configures pi rather than llama.cpp.
+# ./pi-coding-agent/models.nix, since it configures pi rather than llama.cpp.
 { config, ... }:
 {
   flake.modules.homeManager.llama-cpp =

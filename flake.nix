@@ -19,10 +19,10 @@
   # =========================================================================
   # Every *.nix file below ./system and ./features is a flake-parts module,
   # imported automatically by import-tree. There is no central list of imports
-  # to maintain: dropping a file into ./features/<name>/ is enough to add it.
+  # to maintain: dropping a file into ./features/ is enough to add it.
   #
   #   ./system   - machine/system configuration and hardware-specific packages
-  #   ./features - one self-contained directory per program or feature
+  #   ./features - one self-contained file (or directory) per program
   #
   # Files whose path contains "/_" are ignored by import-tree, so helper data
   # can live next to a feature without being evaluated as a module.

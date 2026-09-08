@@ -1,6 +1,6 @@
 # Git, including optional SSH commit signing.
 #
-# The diff pager it uses lives in ../delta.
+# The diff pager it uses lives in ./delta.nix.
 { config, ... }:
 let
   inherit (config.user) gitUsername gitEmail;

@@ -4,7 +4,7 @@
 # comes from the system and this feature only owns ~/.ssh/config.
 #
 # The only thing configured is the agent handoff, so the whole client config
-# follows `user.sshKeys` (see ../keychain). With no keys declared, Home Manager
+# follows `user.sshKeys` (see ./keychain.nix). With no keys declared, Home Manager
 # does not manage ~/.ssh/config at all - it would otherwise replace a
 # hand-written config with an empty one.
 { config, ... }:

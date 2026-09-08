@@ -1,5 +1,5 @@
 # Zed - GUI editor. Language server binaries are contributed by the toolchain
-# features (see ../clangd).
+# features (see ./clangd.nix).
 { config, ... }:
 {
   flake.modules.homeManager.zed-editor = {
