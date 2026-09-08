@@ -20,6 +20,22 @@ in
       description = "Whether the graphical session speaks Wayland instead of X11.";
     };
 
+    containerEngine = mkOption {
+      type = types.enum [
+        "docker"
+        "podman"
+      ];
+      default = "podman";
+      description = ''
+        Container engine this machine provides.
+
+        Tools that assume Docker are adapted to it: with "podman",
+        features/devcontainer.nix wraps the devcontainer CLI so it drives
+        podman instead of looking for a Docker daemon. Set it to "docker" on a
+        machine that runs dockerd, and the CLI is installed unwrapped.
+      '';
+    };
+
     gpuBackend = mkOption {
       type = types.enum [
         "cuda"
