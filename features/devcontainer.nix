@@ -1,7 +1,8 @@
 # devcontainer - reference CLI for devcontainer.json environments.
 #
 # The CLI assumes Docker: it shells out to `docker`, and this machine runs
-# podman instead (see `hardware.containerEngine` in system/hardware.nix).
+# podman instead (see `hardware.containerEngine` in system/hardware.nix, and
+# features/podman.nix for the engine itself).
 #
 # Podman works, but only when the CLI is *told* about it: given
 # `--docker-path podman` it adapts the commands it builds (adding
@@ -67,13 +68,8 @@ in
           fi
 
           if [ "$inject" = 1 ]; then
-            if ! command -v podman >/dev/null 2>&1; then
-              echo "devcontainer: hardware.containerEngine is \"podman\" but podman is not on PATH" >&2
-              exit 127
-            fi
-
             shift
-            set -- "$subcommand" --docker-path podman "$@"
+            set -- "$subcommand" --docker-path ${lib.getExe pkgs.podman} "$@"
           fi
 
           exec ${lib.getExe devcontainer} "$@"

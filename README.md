@@ -221,6 +221,22 @@ Once installed, your environment includes a task runner called `mask`. You can u
 * **A new user setting**: declare the option in `system/settings.nix`, then set
   it in `user.nix`.
 
+## Rootless Containers with podman
+
+`features/podman.nix` installs podman whenever `hardware.containerEngine` is
+`"podman"`, and `features/devcontainer.nix` points the devcontainer CLI at it.
+Home Manager writes podman's configuration into `~/.config/containers`, but not
+the subordinate id ranges in `/etc/subuid` and `/etc/subgid`: those live outside
+your profile, and without them podman maps a single id, which is too few to run
+a container as anything but root. See podman's
+[rootless tutorial](https://github.com/podman-container-tools/podman/blob/main/docs/tutorials/rootless_tutorial.md)
+for how to set them up.
+
+Inside a distrobox/toolbox container two extra things apply: the range has to
+fit the ids the parent namespace mapped in (`cat /proc/self/uid_map`), and
+`/etc` belongs to the image, so the setup has to be redone after the container
+is recreated.
+
 ## Local Models with llama.cpp
 
 `features/llama-cpp/` installs [llama.cpp](https://github.com/ggml-org/llama.cpp),

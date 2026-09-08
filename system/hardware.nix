@@ -29,10 +29,11 @@ in
       description = ''
         Container engine this machine provides.
 
-        Tools that assume Docker are adapted to it: with "podman",
-        features/devcontainer.nix wraps the devcontainer CLI so it drives
-        podman instead of looking for a Docker daemon. Set it to "docker" on a
-        machine that runs dockerd, and the CLI is installed unwrapped.
+        With "podman", features/podman.nix installs it, and tools that assume
+        Docker are adapted to it: features/devcontainer.nix wraps the
+        devcontainer CLI so it drives podman instead of looking for a Docker
+        daemon. Set it to "docker" on a machine that runs dockerd, and podman
+        is left out while the CLI is installed unwrapped.
       '';
     };
 
