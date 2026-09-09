@@ -26,7 +26,7 @@ in
 
       # Start (or reuse) an agent holding the keys before anything else in the
       # shell needs them - Git and Jujutsu sign every commit with one.
-      programs.zsh.initExtra = lib.mkIf loadsKeys (lib.mkBefore (keychainEval "zsh"));
+      programs.zsh.initContent = lib.mkIf loadsKeys (lib.mkBefore (keychainEval "zsh"));
       programs.bash.initExtra = lib.mkIf loadsKeys (lib.mkBefore (keychainEval "bash"));
     };
 
