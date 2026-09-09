@@ -25,6 +25,11 @@
   #   "cpu"    - no GPU offload
   llamaCppGPUBackend = "vulkan";
 
+  # Optional. Whether Atuin's `?` key gets a self-hosted Atuin AI backend (see
+  # features/atuin). Two user services, and roughly 3 GB of disk and up to 4 GB
+  # of memory. Defaults to false, which leaves the shell history alone.
+  atuinAI = false;
+
   # Optional per-user package registries (see features/registries).
   # Omit any of them to keep the public defaults shown here.
   npmRegistry = "https://registry.npmjs.org/";

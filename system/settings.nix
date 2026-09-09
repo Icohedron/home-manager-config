@@ -100,6 +100,24 @@ in
       '';
     };
 
+    atuinAI = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Whether to run the self-hosted Atuin AI backend (see features/atuin).
+
+        Off by default, because it is not a small thing to switch on: two user
+        services start with the session - a llama.cpp server holding a 2.5B
+        model, and the atuin-ai-server container that Atuin's `?` key talks to
+        - and between them they want around 3 GB of disk and up to 4 GB of
+        memory. Set it to true on a machine with room for that; left false,
+        Atuin and its shell history are still installed, with `?` unbound.
+
+        Has no effect on a machine whose hardware.containerEngine is "docker",
+        where the backend cannot run at all.
+      '';
+    };
+
     npmRegistry = mkOption {
       type = types.str;
       default = "https://registry.npmjs.org/";

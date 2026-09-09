@@ -5,12 +5,14 @@
 #
 # Atuin AI (the `?` key on an empty prompt) does not need Hub either - it is
 # pointed at the self-hosted backend from ./ai.nix, which runs against a local
-# model. Everything the two files share lives in ./_ai-stack.nix.
-{ config, ... }:
+# model, and is switched off entirely by `user.atuinAI = false`. Everything the
+# two files share lives in ./_ai-stack.nix.
+{ config, lib, ... }:
 let
-  # Ports, addresses and model of the self-hosted backend. Not to be confused
-  # with the `ai` settings block below, which is Atuin's own `[ai]` section.
-  aiStack = import ./_ai-stack.nix;
+  # Whether the backend is built, plus the ports and model it uses. Not to be
+  # confused with the `ai` settings block below, which is Atuin's own `[ai]`
+  # section.
+  aiStack = import ./_ai-stack.nix { inherit config; };
 in
 {
   flake.modules.homeManager.atuin = {
@@ -22,6 +24,10 @@ in
 
     programs.atuin = {
       enable = true;
+
+      # Without a backend there is nothing for `?` to reach, so drop the
+      # binding rather than leave a key that only ever errors.
+      flags = lib.optional (!aiStack.enable) "--disable-ai";
 
       # Atuin rewrites ~/.config/atuin/config.toml after a shell command when
       # it finds settings missing, which leaves a real file where Home Manager
@@ -38,8 +44,11 @@ in
         update_check = false;
 
         ai = {
-          enabled = true;
-
+          # The `?` key binding. Off unless ./ai.nix actually built a backend
+          # for it to reach.
+          enabled = aiStack.enable;
+        }
+        // lib.optionalAttrs aiStack.enable {
           # The self-hosted backend from ./ai.nix, published on loopback only.
           endpoint = "http://127.0.0.1:${toString aiStack.serverPort}";
 

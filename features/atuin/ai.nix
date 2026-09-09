@@ -10,13 +10,13 @@
 # it translates the Atuin AI protocol into plain OpenAI chat completions. It
 # ships only as a container image, hence podman rather than a package.
 #
-# ./default.nix points the Atuin CLI at it; ./_ai-stack.nix holds the ports, the
-# host-loopback address and the model both files agree on.
+# ./default.nix points the Atuin CLI at it; ./_ai-stack.nix decides whether any
+# of this is built (`user.atuinAI`) and holds the ports, the host-loopback
+# address and the model both files agree on.
 { config, lib, ... }:
 let
-  aiStack = import ./_ai-stack.nix;
+  aiStack = import ./_ai-stack.nix { inherit config; };
 
-  engine = config.hardware.containerEngine;
   atuinAI = config.flake.modules.homeManager.atuin-ai;
 in
 {
@@ -201,8 +201,10 @@ in
       };
     };
 
-  # pasta and rootless podman are what this is built on, so a machine set to
-  # Docker gets Atuin itself but not the backend (see system/hardware.nix).
-  # Atuin's `?` key then has nothing to talk to until the image is run by hand.
-  flake.modules.homeManager.workstation.imports = lib.optional (engine == "podman") atuinAI;
+  # `user.atuinAI = false` leaves Atuin installed without any of this, and so
+  # does a machine set to Docker: pasta and rootless podman are what the
+  # backend is built on (see ../../system/hardware.nix). ./_ai-stack.nix makes
+  # that call once, so the client cannot advertise a backend that was never
+  # built.
+  flake.modules.homeManager.workstation.imports = lib.optional aiStack.enable atuinAI;
 }

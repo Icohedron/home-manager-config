@@ -139,6 +139,11 @@ cd ~/nix
   #   "cpu"    - no GPU offload
   llamaCppGPUBackend = "vulkan";
 
+  # Optional. Whether Atuin's `?` key gets a self-hosted Atuin AI backend (see
+  # features/atuin). Two user services, and roughly 3 GB of disk and up to 4 GB
+  # of memory. Defaults to false, which leaves the shell history alone.
+  atuinAI = true;
+
   # Optional per-user package registries (see features/registries).
   # Omit any of them to keep the public defaults shown here.
   npmRegistry = "https://registry.npmjs.org/";
@@ -329,8 +334,11 @@ so history never leaves the machine.
 Pressing `?` on an empty prompt opens [Atuin AI](https://docs.atuin.sh/ai/),
 which normally talks to Atuin's hosted service and needs a Hub account. Here it
 talks to our own backend instead, running against a local model, so prompts
-stay on this machine as well. `features/atuin/ai.nix` starts two user services,
-both bound to loopback:
+stay on this machine as well.
+
+It is **off by default** - see the requirements below, which are steep for a
+`?` key. Setting `atuinAI = true` in `user.nix` starts two user services, both
+bound to loopback:
 
 | Service | Port | What it runs |
 | --- | --- | --- |
@@ -340,7 +348,7 @@ both bound to loopback:
 `atuin-ai-server` is the same engine the hosted service runs, minus accounts,
 database and usage limits; it translates the Atuin AI protocol into ordinary
 OpenAI chat completions. Upstream ships it only as a container image, so it
-runs under rootless podman - which is why the backend is skipped entirely when
+runs under rootless podman - which is also why the backend stays unbuilt when
 `hardware.containerEngine` is `"docker"`, leaving Atuin itself in place.
 
 The model is **not** the one behind `mask llama start`. Atuin AI gets its own,
@@ -384,6 +392,37 @@ to the host's *external* address and would force llama.cpp to listen on it.
 > Upstream publishes only a `latest` tag, so the image is pulled on first start
 > and then kept. `podman pull ghcr.io/atuinsh/atuin-ai-server:latest` followed
 > by `systemctl --user restart atuin-ai-server` updates it.
+
+### System requirements
+
+With the `Q8_0` weights and the 32768-token context from `_ai-stack.nix`:
+
+| Resource | Cost |
+| --- | --- |
+| Disk | **2.7 GB** of weights in `~/.cache/huggingface/hub`, plus a **122 MiB** container image in podman's storage |
+| Memory | **~4 GB** at the ceiling: 2.5 GiB of weights and a **1.3 GiB** KV cache. Resident use starts well below that, since the weights are mmapped and KV pages are only touched as context fills |
+| CPU | any x86-64 or aarch64 that llama.cpp supports |
+| GPU | **not required** |
+| Network | only on first start, to download the weights and pull the image |
+
+The KV cache is the part that scales: MiniCPM5-2B has 42 layers and 2 KV heads
+of 128 dimensions, so f16 keys and values cost **42 KiB per token** - 1.3 GiB
+at 32768. Halving `contextSize` halves it, and `Q4_K_M` in place of `Q8_0`
+takes the weights from 2.7 GB down to 1.6 GB.
+
+A GPU is genuinely optional: 2.5B parameters is small enough to serve from the
+CPU, and a machine with no device llama.cpp can use still answers a `?` prompt
+in about a second. How fast depends on cores and memory bandwidth - generation
+is bound by streaming the 2.7 GB of weights per token - and GPU offload lifts
+both ends where `hardware.gpuBackend` names a device that actually exists.
+Prefill is the half that matters most, because Atuin's system prompt and tool
+definitions come to roughly **4400 tokens** before your question is added.
+
+Left off - the default - Atuin and its history are still installed: neither
+service is built, `[ai]` is switched off in the config, and `atuin init` is
+called with `--disable-ai`, so the `?` key is never bound. Turning it on is a
+one-line change in `user.nix` followed by `mask build`; the first `?` then
+waits on the 2.7 GB download.
 
 ## Using Zsh
 

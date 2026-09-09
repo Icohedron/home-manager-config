@@ -1,9 +1,21 @@
 # Everything ./default.nix (the client) and ./ai.nix (the backend) must agree
-# on: where the self-hosted Atuin AI stack listens, and which model serves it.
+# on: whether the self-hosted Atuin AI stack is built at all, where it listens,
+# and which model serves it.
 #
 # Not a module: the path contains "/_", so import-tree skips this file instead
-# of evaluating it as a flake-parts module.
+# of evaluating it as a flake-parts module. It takes the flake-parts `config`
+# because `enable` is decided by machine and user settings.
+{ config }:
 {
+  # Whether to build the self-hosted backend and point Atuin at it.
+  #
+  # `user.atuinAI` is the switch (see ../../user.nix); the engine check is not
+  # negotiable, since the backend ships only as a container image and the
+  # loopback mapping it needs is a rootless-podman feature. On a Docker
+  # machine Atuin is still installed, with its AI disabled rather than
+  # pointed at a backend that was never built.
+  enable = config.user.atuinAI && config.hardware.containerEngine == "podman";
+
   # Loopback port of the self-hosted Atuin AI backend (atuin-ai-server), the
   # endpoint the Atuin CLI talks to.
   #
