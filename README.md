@@ -323,7 +323,9 @@ Select it in Pi with `/model`.
 `features/atuin/` replaces the shell's history file with
 [Atuin](https://atuin.sh): a SQLite database, searched with `ctrl-r`, that
 records the directory, exit status and duration of every command. Atuin owns
-`ctrl-r`; fzf keeps `ctrl-t` (files) and `alt-c` (directories).
+`ctrl-r`; fzf keeps `ctrl-t` (files) and `alt-c` (directories). Up-arrow is
+left to the shell - `atuin init` is called with `--disable-up-arrow`, so
+stepping back through the current session behaves as it always did.
 
 The install is **local-only**: no Atuin Hub account, no sync server, and so no
 encryption key to look after. `auto_sync` is off and no `sync_address` is set,

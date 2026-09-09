@@ -25,9 +25,17 @@ in
     programs.atuin = {
       enable = true;
 
-      # Without a backend there is nothing for `?` to reach, so drop the
-      # binding rather than leave a key that only ever errors.
-      flags = lib.optional (!aiStack.enable) "--disable-ai";
+      # Up-arrow stays the shell's own: stepping back through this session's
+      # commands, one keystroke at a time, is a different job from searching
+      # everything ever run. ctrl-r (and `?`, when the AI is on) is where
+      # Atuin belongs.
+      #
+      # Without a backend there is nothing for `?` to reach either, so drop
+      # that binding rather than leave a key that only ever errors.
+      flags = [
+        "--disable-up-arrow"
+      ]
+      ++ lib.optional (!aiStack.enable) "--disable-ai";
 
       # Atuin rewrites ~/.config/atuin/config.toml after a shell command when
       # it finds settings missing, which leaves a real file where Home Manager
