@@ -288,8 +288,8 @@ mask llama wsl-start   # same, with the WSL driver path exported
 ```
 
 Weights are **not** downloaded at build time; `llama-server` fetches them from
-Hugging Face into `~/.cache/llama.cpp` on first use, so expect the first request
-to take a while.
+Hugging Face into `~/.cache/huggingface/hub` on first use, so expect the first
+request to take a while.
 
 > [!NOTE]
 > Every variant silently falls back to CPU-only inference when no usable device
@@ -312,6 +312,78 @@ writes to `~/.pi/agent/models.json`. Pi's built-in llama.cpp provider reports
 every router model as non-reasoning, so the model is declared explicitly there
 to enable thinking and vision and to pin the real 262144-token context window.
 Select it in Pi with `/model`.
+
+## Shell History with Atuin
+
+`features/atuin/` replaces the shell's history file with
+[Atuin](https://atuin.sh): a SQLite database, searched with `ctrl-r`, that
+records the directory, exit status and duration of every command. Atuin owns
+`ctrl-r`; fzf keeps `ctrl-t` (files) and `alt-c` (directories).
+
+The install is **local-only**: no Atuin Hub account, no sync server, and so no
+encryption key to look after. `auto_sync` is off and no `sync_address` is set,
+so history never leaves the machine.
+
+### Self-hosted Atuin AI
+
+Pressing `?` on an empty prompt opens [Atuin AI](https://docs.atuin.sh/ai/),
+which normally talks to Atuin's hosted service and needs a Hub account. Here it
+talks to our own backend instead, running against a local model, so prompts
+stay on this machine as well. `features/atuin/ai.nix` starts two user services,
+both bound to loopback:
+
+| Service | Port | What it runs |
+| --- | --- | --- |
+| `atuin-ai-model` | 8082 | `llama-server` with a small tool-calling model |
+| `atuin-ai-server` | 8081 | [`atuin-ai-server`](https://github.com/atuinsh/atuin-ai-server) in a podman container |
+
+`atuin-ai-server` is the same engine the hosted service runs, minus accounts,
+database and usage limits; it translates the Atuin AI protocol into ordinary
+OpenAI chat completions. Upstream ships it only as a container image, so it
+runs under rootless podman - which is why the backend is skipped entirely when
+`hardware.containerEngine` is `"docker"`, leaving Atuin itself in place.
+
+The model is **not** the one behind `mask llama start`. Atuin AI gets its own,
+deliberately small llama.cpp server so a shell suggestion never waits behind a
+coding request, and so the two can be resident at once: **MiniCPM5-2B** at
+`Q8_0` (2.7 GB), a 2.5B on-device model whose strength is exactly this
+workload - Atuin AI offers tools on every turn, and MiniCPM5-2B scores 66.6 on
+BFCL v4 against 56.8 for the 4B-class Qwen3.5. llama.cpp parses its XML tool
+calls natively, so `--jinja` is all it takes. Ports, model and quantisation all
+live in `features/atuin/_ai-stack.nix`; the weights are fetched into the
+Hugging Face cache (`~/.cache/huggingface/hub`) on the service's first start,
+so the first `?` after a fresh install takes a while.
+
+MiniCPM5 is a thinking model, and the unit runs it with `--reasoning off`.
+Atuin AI has nowhere to put a reasoning trace: `atuin-ai-core` discards
+reasoning deltas ("no wire events exist for these yet" — `http/driver.gleam`)
+and its prompt asks the model to explain itself in plain text instead, so
+thinking would cost latency for tokens the CLI never displays. The `thinking`
+status the backend streams is a spinner label, emitted before every request,
+not reasoning output.
+
+```bash
+systemctl --user status atuin-ai-model atuin-ai-server
+journalctl --user -u atuin-ai-model -f      # weights download, GPU offload
+curl -s localhost:8081/api/cli/models       # what the CLI is offered
+```
+
+Neither service is reachable from the network: the container publishes its port
+on `127.0.0.1` only, and llama.cpp listens on `127.0.0.1` too. A container
+cannot normally reach the host's loopback, so podman's rootless networking is
+asked for a mapping - `--network=pasta:--map-host-loopback,169.254.1.3` - and
+the backend's config points at that address. This replaces the
+`host.docker.internal` trick from the Atuin docs, which under podman resolves
+to the host's *external* address and would force llama.cpp to listen on it.
+
+> [!NOTE]
+> Both services start with the user session. Run `loginctl enable-linger $USER`
+> if they should also come up without a login (and note that rootless podman
+> needs `/etc/subuid` and `/etc/subgid` ranges, see the podman section above).
+>
+> Upstream publishes only a `latest` tag, so the image is pulled on first start
+> and then kept. `podman pull ghcr.io/atuinsh/atuin-ai-server:latest` followed
+> by `systemctl --user restart atuin-ai-server` updates it.
 
 ## Using Zsh
 
