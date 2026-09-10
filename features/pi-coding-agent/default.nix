@@ -61,6 +61,8 @@ in
             devcontainerPath = "devcontainer";
             upArgs = [ ];
             hostCommands = [ "tuicr" ];
+            readableHostPaths = [ ];
+            unreadableHostPatterns = [ ];
             tools = [
               "read"
               "write"
