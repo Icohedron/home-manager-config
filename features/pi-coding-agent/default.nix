@@ -23,11 +23,18 @@ in
           --registry ${lib.escapeShellArg npmRegistry} \
           "$@"
       '';
+
+      iHaveAdhdConfig = (pkgs.formats.json { }).generate "i-have-adhd.json" {
+        alwaysOn = true;
+        hideStatus = true;
+      };
     in
     {
       home.activation.ensurePiNpmCacheDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         mkdir -p ${lib.escapeShellArg piNpmCacheDir}
       '';
+
+      home.file."${piConfigDir}/i-have-adhd.json".source = iHaveAdhdConfig;
 
       programs.pi-coding-agent = {
         enable = true;
@@ -47,6 +54,7 @@ in
           defaultThinkingLevel = "high";
           packages = [
             "git:github.com/Icohedron/pi-devcontainer"
+            "git:github.com/ayghri/i-have-adhd"
             "npm:pi-simplify"
             "npm:pi-zentui"
             "npm:pi-drawio"
