@@ -72,3 +72,36 @@ llama serve -hf "unsloth/Qwen3.6-35B-A3B-MTP-GGUF:UD-Q4_K_XL" \
 LD_LIBRARY_PATH=/usr/lib/wsl/lib mask llama start
 ~~~
 
+## atuin
+
+### start
+
+> Starts the local model behind Atuin AI, so `?` works again
+
+The model is loaded from the Hugging Face cache, which takes a few seconds; the
+unit is up before the server is ready to answer. Watch it come up with
+`journalctl --user -u atuin-ai-model.service -f` and wait for the line about
+listening.
+
+~~~sh
+systemctl --user start atuin-ai-model.service
+~~~
+
+### stop
+
+> Stops that model, releasing the VRAM (or RAM) it holds
+
+Only the llama.cpp server from features/atuin/ai.nix - the one serving
+MiniCPM5 on port 8082. `mask llama start` is a different server, and
+atuin-ai-server keeps running: it costs nothing idle, and it is what the `?`
+key talks to.
+
+Atuin AI stays unusable until `mask atuin start`, since the backend has no
+model to reach. Note that anything which (re)starts atuin-ai-server brings the
+model back up with it - `Wants=atuin-ai-model.service` - including a
+`mask build` that changes the backend's unit.
+
+~~~sh
+systemctl --user stop atuin-ai-model.service
+~~~
+

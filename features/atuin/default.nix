@@ -65,11 +65,41 @@ in
           # stays unset, matching a server started without AUTH_TOKEN.
           endpoint_protocol = "oss";
 
+          yolo = false;
+          tips = true;
+
           capabilities = {
-            # Reading past command *output* needs the daemon and pty-proxy to
-            # have recorded it. Neither runs here, so do not advertise a
-            # capability that can only fail.
+            # Reading past command *output* needs two things recording it: the
+            # daemon, to hold it in memory, and pty-proxy, to capture it from
+            # the terminal. Neither runs here, so do not advertise a capability
+            # that can only fail.
+            #
+            # Both were tried (`daemon.enable`, plus `[pty_proxy] enabled`, and
+            # capture did work in a plain terminal). What rules it out is
+            # herdr, where nearly every shell here lives: herdr works out which
+            # agent a pane is running - and whether a pane is free at all - by
+            # looking at the foreground process of the PTY it gave that pane,
+            # and pty-proxy has to *be* that process to read the shell's
+            # OSC 133 markers. Wrap the pane and `herdr agent list` goes empty:
+            # the agent panel loses every session.
+            #
+            # Worth revisiting only if herdr matches agents among the pane
+            # process's descendants rather than its foreground process. The
+            # obvious workaround does not hold: pi already reports itself
+            # through `pane.report_agent` (see `herdr integration status`), and
+            # behind the proxy that registration silently fails to land, even
+            # though the same pane can be registered by hand with
+            # `herdr pane report-agent`.
             enable_history_output = false;
+
+            enable_history_search = true;
+            enable_file_tools = true;
+            enable_command_execution = true;
+          };
+
+          opening = {
+            send_cwd = true;
+            send_last_command = true;
           };
         };
       };
