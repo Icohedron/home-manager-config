@@ -64,7 +64,7 @@
 
     # Native context is 131072 tokens; a shell assistant needs nowhere near
     # that, and a smaller KV cache keeps the model cheap to keep running.
-    contextSize = 32768;
+    contextSize = 131072;
 
     # What OpenBMB recommends for the MiniCPM5 series with thinking off. Their
     # thinking numbers (temp 1.0) do not apply here - see ai.nix.
