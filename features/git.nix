@@ -38,9 +38,31 @@ in
             user.signingkey = commitSigning.key;
             commit.gpgsign = true;
             gpg.format = "ssh";
+            # Without this, `git log --show-signature` and `git verify-commit`
+            # error out instead of verifying. Generated below on activation.
+            gpg.ssh.allowedSignersFile = "~/.ssh/allowed_signers";
           })
         ];
         signing.format = null;
+      };
+
+      # ~/.ssh/allowed_signers maps our email to our public key so ssh
+      # signatures made by that key verify. The key lives outside the store,
+      # so it is read at activation time rather than at evaluation time.
+      home.activation = lib.mkIf commitSigning.enable {
+        gitAllowedSigners = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          keyFile="${commitSigning.key}"
+          keyFile="''${keyFile/#\~/$HOME}"
+          if [ -r "$keyFile" ]; then
+            run mkdir -p -m 700 "$HOME/.ssh"
+            run install -m 600 \
+              <(printf '%s namespaces="git" %s\n' \
+                ${lib.escapeShellArg gitEmail} "$(cat "$keyFile")") \
+              "$HOME/.ssh/allowed_signers"
+          else
+            warnEcho "git: $keyFile is missing, skipping ~/.ssh/allowed_signers"
+          fi
+        '';
       };
     };
 
