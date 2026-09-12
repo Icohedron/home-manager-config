@@ -4,9 +4,9 @@
 # therefore no key to look after. History never leaves the machine.
 #
 # Atuin AI (the `?` key on an empty prompt) does not need Hub either - it is
-# pointed at the self-hosted backend from ./ai.nix, which runs against a local
-# model, and is switched off entirely by `user.atuinAI = false`. Everything the
-# two files share lives in ./_ai-stack.nix.
+# pointed at the self-hosted backend from ./ai.nix, which runs against GitHub
+# Copilot, and is switched off entirely by `user.atuinAI = false`. Everything
+# the two files share lives in ./_ai-stack.nix.
 { config, lib, ... }:
 let
   # Whether the backend is built, plus the ports and model it uses. Not to be

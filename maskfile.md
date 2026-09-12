@@ -74,34 +74,54 @@ LD_LIBRARY_PATH=/usr/lib/wsl/lib mask llama start
 
 ## atuin
 
-### start
+### login
 
-> Starts the local model behind Atuin AI, so `?` works again
+> Authorises Atuin AI against GitHub Copilot (device flow, once per machine)
 
-The model is loaded from the Hugging Face cache, which takes a few seconds; the
-unit is up before the server is ready to answer. Watch it come up with
-`journalctl --user -u atuin-ai-model.service -f` and wait for the line about
-listening.
+Only for `atuinAIBackend = "copilot"`. The llama-cpp backend needs no login -
+just `mask llama start`.
 
-~~~sh
-systemctl --user start atuin-ai-model.service
-~~~
-
-### stop
-
-> Stops that model, releasing the VRAM (or RAM) it holds
-
-Only the llama.cpp server from features/atuin/ai.nix - the one serving
-MiniCPM5 on port 8082. `mask llama start` is a different server, and
-atuin-ai-server keeps running: it costs nothing idle, and it is what the `?`
-key talks to.
-
-Atuin AI stays unusable until `mask atuin start`, since the backend has no
-model to reach. Note that anything which (re)starts atuin-ai-server brings the
-model back up with it - `Wants=atuin-ai-model.service` - including a
-`mask build` that changes the backend's unit.
+Prints a URL and a code, waits for the browser, then restarts the proxy. The
+Copilot token it stores under `~/.config/litellm/github_copilot` is refreshed
+automatically from then on; run this again if `?` starts answering with an
+authentication error.
 
 ~~~sh
-systemctl --user stop atuin-ai-model.service
+atuin-ai-login
 ~~~
 
+### models
+
+> Lists the Copilot model ids this account may use
+
+What `features/atuin/_ai-stack.nix` has to pick from: put any id shown here in
+its `models` list, then `mask build`.
+
+~~~sh
+token="$(jq -r .token ~/.config/litellm/github_copilot/api-key.json)"
+curl -s https://api.githubcopilot.com/models \
+    -H "Authorization: Bearer $token" \
+    -H "Copilot-Integration-Id: vscode-chat" |
+    jq -r '.data[] | select(.capabilities.type == "chat") | .id'
+~~~
+
+### restart
+
+> Restarts the Atuin AI services, so `?` works again
+
+Nothing here holds VRAM, so there is nothing to stop for resources' sake - this
+is for after a failed login, a lost network, or a llama.cpp server that was
+restarted underneath the backend.
+
+~~~sh
+systemctl --user restart atuin-ai-server.service
+systemctl --user restart atuin-ai-proxy.service 2>/dev/null || true
+~~~
+
+### logs
+
+> Follows the Atuin AI services
+
+~~~sh
+journalctl --user -u atuin-ai-server.service -u atuin-ai-proxy.service -f
+~~~

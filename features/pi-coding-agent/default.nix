@@ -3,7 +3,7 @@
 # The rest of this directory extends the same Home Manager module:
 #   ./sandbox.nix      - pi-landstrip filesystem/network policy
 #   ./integrations.nix - herdr extension and tuicr skill wiring
-#   ./models.nix       - local llama.cpp provider and model declaration
+#   ./models.nix       - local llama.cpp providers and model declarations
 { config, ... }:
 let
   inherit (config.user) homeDirectory npmRegistry;

@@ -335,17 +335,16 @@ so history never leaves the machine.
 
 Pressing `?` on an empty prompt opens [Atuin AI](https://docs.atuin.sh/ai/),
 which normally talks to Atuin's hosted service and needs a Hub account. Here it
-talks to our own backend instead, running against a local model, so prompts
-stay on this machine as well.
+talks to our own backend instead, so no Hub account exists and nothing is
+recorded off the machine.
 
-It is **off by default** - see the requirements below, which are steep for a
-`?` key. Setting `atuinAI = true` in `user.nix` starts two user services, both
-bound to loopback:
+It is **off by default**. Setting `atuinAI = true` in `user.nix` starts the
+backend, bound to loopback:
 
 | Service | Port | What it runs |
 | --- | --- | --- |
-| `atuin-ai-model` | 8082 | `llama-server` with a small tool-calling model |
 | `atuin-ai-server` | 8081 | [`atuin-ai-server`](https://github.com/atuinsh/atuin-ai-server) in a podman container |
+| `atuin-ai-proxy` | 8082 | LiteLLM, serving GitHub Copilot as a plain OpenAI endpoint (`copilot` backend only) |
 
 `atuin-ai-server` is the same engine the hosted service runs, minus accounts,
 database and usage limits; it translates the Atuin AI protocol into ordinary
@@ -353,41 +352,55 @@ OpenAI chat completions. Upstream ships it only as a container image, so it
 runs under rootless podman - which is also why the backend stays unbuilt when
 `hardware.containerEngine` is `"docker"`, leaving Atuin itself in place.
 
-The model is **not** the one behind `mask llama start`. Atuin AI gets its own,
-deliberately small llama.cpp server so a shell suggestion never waits behind a
-coding request, and so the two can be resident at once: **MiniCPM5-2B** at
-`Q8_0` (2.7 GB), a 2.5B on-device model whose strength is exactly this
-workload - Atuin AI offers tools on every turn, and MiniCPM5-2B scores 66.6 on
-BFCL v4 against 56.8 for the 4B-class Qwen3.5. llama.cpp parses its XML tool
-calls natively, so `--jinja` is all it takes. Ports, model and quantisation all
-live in `features/atuin/_ai-stack.nix`; the weights are fetched into the
-Hugging Face cache (`~/.cache/huggingface/hub`) on the service's first start,
-so the first `?` after a fresh install takes a while.
+#### Which engine answers
 
-MiniCPM5 is a thinking model, and the unit runs it with `--reasoning off`.
-Atuin AI has nowhere to put a reasoning trace: `atuin-ai-core` discards
-reasoning deltas ("no wire events exist for these yet" — `http/driver.gleam`)
-and its prompt asks the model to explain itself in plain text instead, so
-thinking would cost latency for tokens the CLI never displays. The `thinking`
-status the backend streams is a spinner label, emitted before every request,
-not reasoning output.
+`atuinAIBackend` in `user.nix` picks what those chat completions are sent to.
+Ports and the model list live in `features/atuin/_ai-stack.nix`.
+
+| `atuinAIBackend` | Answers with | Costs | Available |
+| --- | --- | --- | --- |
+| `"copilot"` (default) | GitHub Copilot, through the LiteLLM proxy | a Copilot subscription, and one premium request per message | always - nothing is resident locally |
+| `"llama-cpp"` | the llama.cpp server on port 8080, the one `mask llama start` runs | nothing, beyond the VRAM that server already holds | only while that server runs, and each `?` queues behind whatever coding request it is serving |
+
+**Copilot** needs the proxy because its API wants a token that expires after
+about half an hour and has to be minted from a GitHub OAuth token, while
+`atuin-ai-server` resolves its `api_key` once, at boot. LiteLLM owns that
+refresh. Authorise it once per machine:
 
 ```bash
-systemctl --user status atuin-ai-model atuin-ai-server
-journalctl --user -u atuin-ai-model -f      # weights download, GPU offload
+mask atuin login        # or: atuin-ai-login
+```
+
+That runs GitHub's device flow, prints a URL and a code, and stores the token
+under `~/.config/litellm/github_copilot`, where LiteLLM refreshes it from then
+on. Until it has run, `atuin-ai-proxy` fails at start (it prints a device code
+to the journal and gives up after a minute), and `?` has nothing to reach. The
+model ids in `_ai-stack.nix` must be ones the account may use - `mask atuin
+models` lists them.
+
+**llama-cpp** builds no proxy and starts no second model: the backend points
+straight at `127.0.0.1:8080` and offers the one model that server was started
+with (Qwen3.6-35B-A3B). Nothing starts it on our behalf, so a `?` prompt
+answers only after `mask llama start`. This is the choice for a machine with
+the VRAM to keep that model resident anyway, or for keeping every prompt local.
+
+```bash
+mask atuin logs                             # follow both services
+systemctl --user status atuin-ai-server     # and atuin-ai-proxy, on copilot
 curl -s localhost:8081/api/cli/models       # what the CLI is offered
 ```
 
 Neither service is reachable from the network: the container publishes its port
-on `127.0.0.1` only, and llama.cpp listens on `127.0.0.1` too. A container
-cannot normally reach the host's loopback, so podman's rootless networking is
-asked for a mapping - `--network=pasta:--map-host-loopback,169.254.1.3` - and
-the backend's config points at that address. This replaces the
-`host.docker.internal` trick from the Atuin docs, which under podman resolves
-to the host's *external* address and would force llama.cpp to listen on it.
+on `127.0.0.1` only, and the proxy (or llama.cpp) listens on `127.0.0.1` too. A
+container cannot normally reach the host's loopback, so podman's rootless
+networking is asked for a mapping -
+`--network=pasta:--map-host-loopback,169.254.1.3` - and the backend's config
+points at that address. This replaces the `host.docker.internal` trick from the
+Atuin docs, which under podman resolves to the host's *external* address and
+would force the engine to listen on it.
 
 > [!NOTE]
-> Both services start with the user session. Run `loginctl enable-linger $USER`
+> The services start with the user session. Run `loginctl enable-linger $USER`
 > if they should also come up without a login (and note that rootless podman
 > needs `/etc/subuid` and `/etc/subgid` ranges, see the podman section above).
 >
@@ -395,36 +408,9 @@ to the host's *external* address and would force llama.cpp to listen on it.
 > and then kept. `podman pull ghcr.io/atuinsh/atuin-ai-server:latest` followed
 > by `systemctl --user restart atuin-ai-server` updates it.
 
-### System requirements
-
-With the `Q8_0` weights and the 32768-token context from `_ai-stack.nix`:
-
-| Resource | Cost |
-| --- | --- |
-| Disk | **2.7 GB** of weights in `~/.cache/huggingface/hub`, plus a **122 MiB** container image in podman's storage |
-| Memory | **~4 GB** at the ceiling: 2.5 GiB of weights and a **1.3 GiB** KV cache. Resident use starts well below that, since the weights are mmapped and KV pages are only touched as context fills |
-| CPU | any x86-64 or aarch64 that llama.cpp supports |
-| GPU | **not required** |
-| Network | only on first start, to download the weights and pull the image |
-
-The KV cache is the part that scales: MiniCPM5-2B has 42 layers and 2 KV heads
-of 128 dimensions, so f16 keys and values cost **42 KiB per token** - 1.3 GiB
-at 32768. Halving `contextSize` halves it, and `Q4_K_M` in place of `Q8_0`
-takes the weights from 2.7 GB down to 1.6 GB.
-
-A GPU is genuinely optional: 2.5B parameters is small enough to serve from the
-CPU, and a machine with no device llama.cpp can use still answers a `?` prompt
-in about a second. How fast depends on cores and memory bandwidth - generation
-is bound by streaming the 2.7 GB of weights per token - and GPU offload lifts
-both ends where `hardware.gpuBackend` names a device that actually exists.
-Prefill is the half that matters most, because Atuin's system prompt and tool
-definitions come to roughly **4400 tokens** before your question is added.
-
-Left off - the default - Atuin and its history are still installed: neither
-service is built, `[ai]` is switched off in the config, and `atuin init` is
-called with `--disable-ai`, so the `?` key is never bound. Turning it on is a
-one-line change in `user.nix` followed by `mask build`; the first `?` then
-waits on the 2.7 GB download.
+Left off - the default - Atuin and its history are still installed: no service
+is built, `[ai]` is switched off in the config, and `atuin init` is called with
+`--disable-ai`, so the `?` key is never bound.
 
 ## Using Zsh
 

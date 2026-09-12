@@ -107,14 +107,39 @@ in
         Whether to run the self-hosted Atuin AI backend (see features/atuin).
 
         Off by default, because it is not a small thing to switch on: two user
-        services start with the session - a llama.cpp server holding a 2.5B
-        model, and the atuin-ai-server container that Atuin's `?` key talks to
-        - and between them they want around 3 GB of disk and up to 4 GB of
-        memory. Set it to true on a machine with room for that; left false,
-        Atuin and its shell history are still installed, with `?` unbound.
+        services start with the session - a LiteLLM proxy that serves GitHub
+        Copilot as a plain OpenAI endpoint, and the atuin-ai-server container
+        that Atuin's `?` key talks to. It needs a GitHub Copilot subscription,
+        authorised once with `atuin-ai-login`; chats then bill that account's
+        quota. Left false, Atuin and its shell history are still installed,
+        with `?` unbound.
 
         Has no effect on a machine whose hardware.containerEngine is "docker",
         where the backend cannot run at all.
+      '';
+    };
+
+    atuinAIBackend = mkOption {
+      type = types.enum [
+        "copilot"
+        "llama-cpp"
+      ];
+      default = "copilot";
+      description = ''
+        Which engine answers Atuin AI (see features/atuin/ai.nix). Ignored
+        unless user.atuinAI is true.
+
+        "copilot"   - GitHub Copilot, through a LiteLLM proxy that mints and
+                      refreshes Copilot's short-lived token. Needs a Copilot
+                      subscription, authorised once with `atuin-ai-login`, and
+                      spends that account's quota; always available, since
+                      nothing has to be resident locally.
+
+        "llama-cpp" - the interactive llama.cpp server from features/llama-cpp
+                      (port 8080), the one `mask llama start` brings up.
+                      Nothing leaves the machine and nothing is billed, but a
+                      `?` prompt only answers while that server runs, and it
+                      queues behind whatever coding request it is serving.
       '';
     };
 
