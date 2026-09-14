@@ -21,8 +21,9 @@ let
   podmanModule = config.flake.modules.homeManager.podman;
 in
 {
-  flake.modules.homeManager.podman = {
+  flake.modules.homeManager.podman = { pkgs, ... }: {
     services.podman.enable = true;
+    home.packages = [ pkgs.podman-compose ];
   };
 
   flake.modules.homeManager.workstation.imports = lib.optional (engine == "podman") podmanModule;
