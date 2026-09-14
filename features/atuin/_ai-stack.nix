@@ -74,12 +74,22 @@ in
       # constraint here, and the same model pi codes with is the one worth
       # having on a shell prompt. Adding a second is a line in this list -
       # the CLI then offers a picker.
+      #
+      # `responsesOnly` marks a model Copilot serves on /responses alone;
+      # ./ai.nix turns it into the `mode: responses` tag that makes LiteLLM
+      # bridge chat completions to that endpoint. Without it the request is
+      # answered with `model "..." is not accessible via the
+      # /chat/completions endpoint`, which the CLI shows as "LLM request
+      # failed". LiteLLM tags the codex models itself, but knows nothing of
+      # gpt-5.6-*; `mask atuin models` lists what the account may use, not
+      # which endpoint serves it.
       [
         {
-          alias = "claude-opus-5";
-          id = "claude-opus-5";
-          name = "Claude Opus 5";
+          alias = "gpt-5.6-sol";
+          id = "gpt-5.6-sol";
+          name = "GPT-5.6-Sol";
           description = "GitHub Copilot - frontier model";
+          responsesOnly = true;
         }
       ]
     else
@@ -91,6 +101,7 @@ in
           id = llamaCpp.model.id;
           name = llamaCpp.model.name;
           description = "Local llama.cpp on port ${toString llamaCpp.port} (mask llama start)";
+          responsesOnly = false;
         }
       ];
 }

@@ -50,7 +50,7 @@ in
         settings = {
           npmCommand = [ "${piNpmWrapper}/bin/pi-npm" ];
           defaultProvider = "github-copilot";
-          defaultModel = "claude-opus-5";
+          defaultModel = "gpt-5.6-sol";
           defaultThinkingLevel = "high";
           packages = [
             "git:github.com/Icohedron/pi-devcontainer"

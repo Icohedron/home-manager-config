@@ -85,10 +85,23 @@ in
       # LiteLLM proxy config: one entry per model in ./_ai-stack.nix, all of
       # them through the github_copilot provider.
       proxyConfig = (pkgs.formats.yaml { }).generate "atuin-ai-litellm.yaml" {
-        model_list = map (model: {
-          model_name = model.id;
-          litellm_params.model = "github_copilot/${model.id}";
-        }) aiStack.models;
+        model_list = map (
+          model:
+          {
+            model_name = model.id;
+            litellm_params.model = "github_copilot/${model.id}";
+          }
+          // lib.optionalAttrs model.responsesOnly {
+            # Copilot serves this model on /responses only, and rejects the
+            # chat completion atuin-ai-server sends. LiteLLM bridges the two
+            # for any deployment whose mode is "responses" - but it decides
+            # that from its bundled price list, which has no entry for a
+            # model this new, and an unknown model defaults to chat. This tag
+            # is registered as model info for the deployment and is what the
+            # bridge reads instead.
+            model_info.mode = "responses";
+          }
+        ) aiStack.models;
 
         litellm_settings = {
           # LiteLLM rewrites system messages to assistant ones for Copilot by
