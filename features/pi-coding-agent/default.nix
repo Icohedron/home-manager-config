@@ -54,11 +54,9 @@ in
           defaultThinkingLevel = "high";
           packages = [
             "git:github.com/Icohedron/pi-devcontainer"
-            "git:github.com/ayghri/i-have-adhd"
-            "npm:pi-simplify"
-            "npm:pi-zentui"
-            "npm:pi-drawio"
-            "npm:pi-smart-compact"
+            "git:github.com/Icohedron/i-have-adhd"
+            "git:github.com/Icohedron/pi-minions"
+            "git:github.com/Icohedron/pi-drawio"
           ];
 
           devcontainer = {
@@ -68,7 +66,7 @@ in
             execArgs = [ ];
             devcontainerPath = "devcontainer";
             upArgs = [ ];
-            hostCommands = [ "tuicr" ];
+            hostCommands = [ "tuicr" "drawio" ];
             readableHostPaths = [ ];
             unreadableHostPatterns = [ ];
             tools = [
