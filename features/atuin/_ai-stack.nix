@@ -81,13 +81,13 @@ in
       # answered with `model "..." is not accessible via the
       # /chat/completions endpoint`, which the CLI shows as "LLM request
       # failed". LiteLLM tags the codex models itself, but knows nothing of
-      # gpt-5.6-*; `mask atuin models` lists what the account may use, not
+      # gpt-6-*; `mask atuin models` lists what the account may use, not
       # which endpoint serves it.
       [
         {
-          alias = "gpt-5.6-sol";
-          id = "gpt-5.6-sol";
-          name = "GPT-5.6-Sol";
+          alias = "gpt-6-sol";
+          id = "gpt-6-sol";
+          name = "GPT-6-Sol";
           description = "GitHub Copilot - frontier model";
           responsesOnly = true;
         }
