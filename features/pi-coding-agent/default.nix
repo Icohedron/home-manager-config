@@ -57,6 +57,7 @@ in
             "git:github.com/Icohedron/i-have-adhd"
             "git:github.com/Icohedron/pi-minions"
             "git:github.com/Icohedron/pi-drawio"
+            "git:github.com/Icohedron/skills"
           ];
 
           devcontainer = {
