@@ -29,13 +29,15 @@ in
             };
             ui.editor = "hx";
           }
-          # Without a key, leave jj's signing backend unconfigured entirely.
+          # Sign only our unsigned, mutable commits at `jj git push`, not on
+          # every edit/rebase. Without a key, leave signing unconfigured.
           (lib.mkIf commitSigning.enable {
             signing = {
-              sign-all = true;
+              behavior = "drop";
               backend = "ssh";
               key = commitSigning.key;
             };
+            git.sign-on-push = true;
           })
         ];
       };

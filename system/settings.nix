@@ -80,9 +80,10 @@ in
         default = config.user.commitSigning.key != null;
         defaultText = "whether user.commitSigning.key is set";
         description = ''
-          Sign every Git and Jujutsu commit. Turns itself on as soon as a key
-          is configured; set it to false to keep the key declared but stop
-          signing.
+          Enable SSH commit signing. Git signs when committing; Jujutsu signs
+          only your authored, unsigned mutable commits when `jj git push` runs.
+          Turns itself on as soon as a key is configured; set it to false to
+          keep the key declared but stop signing.
         '';
       };
     };

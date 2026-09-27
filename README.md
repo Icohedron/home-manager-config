@@ -124,10 +124,10 @@ cd ~/nix
   # also work. Defaults to [ ], which leaves keychain disabled entirely.
   sshKeys = [ "id_ed25519" ];
 
-  # Optional. Commit signing for Git and Jujutsu (see features/git,
-  # features/jujutsu). Declaring a key switches signing on; add
-  # `enable = false;` to keep the key but stop signing. Defaults to no key,
-  # and therefore no signing at all.
+  # Optional SSH commit signing for Git and Jujutsu. Declaring a public key
+  # enables it; add `commitSigning.enable = false;` to keep the key without
+  # signing. Without a key, signing is off. Git signs on commit; Jujutsu signs
+  # only your authored, unsigned mutable commits on `jj git push` (not `git push`).
   commitSigning.key = "~/.ssh/id_ed25519.pub";
 
   # Whether to use wayland or x11 applications

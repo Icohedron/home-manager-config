@@ -24,8 +24,8 @@ in
         keys = sshKeys;
       };
 
-      # Start (or reuse) an agent holding the keys before anything else in the
-      # shell needs them - Git and Jujutsu sign every commit with one.
+      # Start (or reuse) an agent holding the keys before signing needs them.
+      # Git signs on commit; Jujutsu signs our commits when pushing.
       programs.zsh.initContent = lib.mkIf loadsKeys (lib.mkBefore (keychainEval "zsh"));
       programs.bash.initExtra = lib.mkIf loadsKeys (lib.mkBefore (keychainEval "bash"));
     };
