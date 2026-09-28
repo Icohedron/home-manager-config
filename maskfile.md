@@ -83,11 +83,61 @@ just `mask llama start`.
 
 Prints a URL and a code, waits for the browser, then restarts the proxy. The
 Copilot token it stores under `~/.config/litellm/github_copilot` is refreshed
-automatically from then on; run this again if `?` starts answering with an
-authentication error.
+automatically from then on. Run this again if `?` stops working because GitHub
+revoked the stored authorization; re-login forces a fresh device flow.
 
 ~~~sh
 atuin-ai-login
+~~~
+
+### status
+
+> Shows whether the Atuin AI server and LiteLLM proxy are running, and checks GitHub Copilot authorization
+
+The auth check exchanges the stored OAuth token with GitHub; it does not make a
+model request or print the token. On the llama-cpp backend, Copilot auth is not
+required.
+
+~~~sh
+for service in atuin-ai-server atuin-ai-proxy; do
+    case "$service" in
+        atuin-ai-server) label='Atuin AI server' ;;
+        atuin-ai-proxy) label='LiteLLM' ;;
+    esac
+    if systemctl --user is-active --quiet "$service.service"; then
+        printf '%s: running\n' "$label"
+    elif systemctl --user cat "$service.service" --no-pager >/dev/null 2>&1; then
+        printf '%s: not running\n' "$label"
+    else
+        printf '%s: not configured\n' "$label"
+    fi
+done
+
+if ! systemctl --user cat atuin-ai-proxy.service --no-pager >/dev/null 2>&1; then
+    echo 'Copilot auth: not required (no LiteLLM proxy)'
+else
+    token_file="$HOME/.config/litellm/github_copilot/access-token"
+    if [ ! -s "$token_file" ]; then
+        echo 'Copilot auth: missing (run mask atuin login)'
+    else
+        # Pass the header on stdin, not in curl's process arguments or output.
+        oauth_token="$(cat "$token_file")"
+        if [ -z "$oauth_token" ]; then
+            echo 'Copilot auth: missing (run mask atuin login)'
+        elif code="$(printf 'Authorization: token %s\n' "$oauth_token" |
+            curl --silent --output /dev/null --write-out '%{http_code}' \
+                --max-time 10 --header @- \
+                https://api.github.com/copilot_internal/v2/token 2>/dev/null)"; then
+            case "$code" in
+                200) echo 'Copilot auth: valid (GitHub accepted the token)' ;;
+                401) echo 'Copilot auth: expired or revoked (run mask atuin login)' ;;
+                *)   printf 'Copilot auth: unknown (GitHub HTTP %s)\n' "$code" ;;
+            esac
+        else
+            echo 'Copilot auth: unknown (cannot reach GitHub)'
+        fi
+    fi
+fi
 ~~~
 
 ### models

@@ -60,23 +60,15 @@ in
       # even if XDG variables differ.
       copilotTokenDir = "${config.user.homeDirectory}/.config/litellm/github_copilot";
 
-      # Interactive first-run login: GitHub's device flow, which prints a URL
-      # and a code to the terminal and waits for the browser. Run once; the
-      # service refreshes everything else on its own.
+      # Interactive (re-)login: force GitHub's device flow even when a cached
+      # OAuth token has been revoked. A failed login leaves the existing tokens
+      # intact; on success the helper replaces them and restarts the proxy.
       atuinAILogin = pkgs.writeShellApplication {
         name = "atuin-ai-login";
         runtimeInputs = [ litellmPython ];
         text = ''
           export GITHUB_COPILOT_TOKEN_DIR=${lib.escapeShellArg copilotTokenDir}
-          python - <<'PY'
-          from litellm.llms.github_copilot.authenticator import Authenticator
-
-          # get_api_key() runs the device flow when no token is stored yet,
-          # then exchanges it for a Copilot token - which also proves the
-          # account actually has Copilot access.
-          Authenticator().get_api_key()
-          print("Atuin AI: GitHub Copilot authenticated.")
-          PY
+          python ${./_login.py}
           systemctl --user restart atuin-ai-proxy.service
           echo "Atuin AI: proxy restarted. Press ? on an empty prompt to chat."
         '';
@@ -215,10 +207,9 @@ in
 
               Environment = [ "GITHUB_COPILOT_TOKEN_DIR=${copilotTokenDir}" ];
 
-              # With no stored GitHub token LiteLLM starts the device flow at boot,
-              # prints the code to the journal and gives up after a minute. Run
-              # `atuin-ai-login` once instead of racing it; until then this unit
-              # restarts, slowly, rather than spinning.
+              # Without a valid stored GitHub token, LiteLLM cannot register
+              # its model. Run `atuin-ai-login` in a terminal to authorise it;
+              # this unit restarts slowly instead of spinning on failures.
               Restart = "on-failure";
               RestartSec = 60;
             };

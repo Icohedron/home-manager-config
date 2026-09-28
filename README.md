@@ -371,12 +371,14 @@ refresh. Authorise it once per machine:
 mask atuin login        # or: atuin-ai-login
 ```
 
-That runs GitHub's device flow, prints a URL and a code, and stores the token
+That starts GitHub's device flow, prints a URL and a code, and stores the token
 under `~/.config/litellm/github_copilot`, where LiteLLM refreshes it from then
-on. Until it has run, `atuin-ai-proxy` fails at start (it prints a device code
-to the journal and gives up after a minute), and `?` has nothing to reach. The
-model ids in `_ai-stack.nix` must be ones the account may use - `mask atuin
-models` lists them.
+on. If the stored GitHub authorization is revoked, run `atuin-ai-login` again:
+it requests a fresh authorization without deleting the old credentials until
+login succeeds, then restarts the proxy. Until it has valid credentials, the
+proxy may run without any usable models, and `?` fails. The model ids in
+`_ai-stack.nix` must be ones the account may use - `mask atuin models` lists
+them.
 
 **llama-cpp** builds no proxy and starts no second model: the backend points
 straight at `127.0.0.1:8080` and offers the one model that server was started
