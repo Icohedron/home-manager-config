@@ -29,7 +29,11 @@ in
               name = gitUsername;
               email = gitEmail;
             };
-            core.editor = "hx";
+            core = {
+              editor = "hx";
+              # Match Jujutsu's working-copy.eol-conversion=input globally.
+              autocrlf = "input";
+            };
 
             merge.conflictstyle = "zdiff3";
           }
