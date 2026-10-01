@@ -15,12 +15,15 @@ in
       # Keep pi's npm state isolated from the user's global ~/.npm directory.
       # npmRegistry is provided per-user from user.nix (see ../registries.nix for
       # the global npm/PyPI/NuGet registry configuration).
+      # Pi loads package resources at runtime; extension test/build dependencies
+      # need not be installed and can be newer than versions in the registry.
       piConfigDir = "${homeDirectory}/.pi/agent";
       piNpmCacheDir = "${homeDirectory}/.pi/.npm";
       piNpmWrapper = pkgs.writeShellScriptBin "pi-npm" ''
         exec ${pkgs.nodejs}/bin/npm \
           --cache ${lib.escapeShellArg piNpmCacheDir} \
           --registry ${lib.escapeShellArg npmRegistry} \
+          --omit=dev \
           "$@"
       '';
 
