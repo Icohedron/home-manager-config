@@ -157,15 +157,38 @@ curl -s https://api.githubcopilot.com/models \
 
 ### restart
 
-> Restarts the Atuin AI services, so `?` works again
+> Restarts LiteLLM (when configured) and the Atuin AI server, so `?` works again
 
 Nothing here holds VRAM, so there is nothing to stop for resources' sake - this
 is for after a failed login, a lost network, or a llama.cpp server that was
-restarted underneath the backend.
+restarted underneath the backend. A stale LiteLLM process can survive a unit
+restart and hold port 8082; only processes in that service's cgroup are killed.
 
 ~~~sh
+if systemctl --user cat atuin-ai-proxy.service --no-pager >/dev/null 2>&1; then
+    systemctl --user stop atuin-ai-proxy.service || exit $?
+    # A leftover process may still own 8082 even though the unit has stopped.
+    for cgroup in /proc/[0-9]*/cgroup; do
+        if grep -Eq '/atuin-ai-proxy[.]service$' "$cgroup" 2>/dev/null &&
+            grep -aq litellm "${cgroup%/cgroup}/cmdline" 2>/dev/null; then
+            pid="${cgroup%/cgroup}"
+            pid="${pid##*/}"
+            kill -TERM "$pid" 2>/dev/null || true
+        fi
+    done
+    for attempt in 1 2 3 4 5; do
+        listeners="$(ss -H -ltn 'sport = :8082')" || exit $?
+        [ -z "$listeners" ] && break
+        sleep 1
+    done
+    listeners="$(ss -H -ltn 'sport = :8082')" || exit $?
+    if [ -n "$listeners" ]; then
+        echo 'Port 8082 is still in use; refusing to start LiteLLM.' >&2
+        exit 1
+    fi
+    systemctl --user start atuin-ai-proxy.service || exit $?
+fi
 systemctl --user restart atuin-ai-server.service
-systemctl --user restart atuin-ai-proxy.service 2>/dev/null || true
 ~~~
 
 ### logs
