@@ -191,6 +191,17 @@ fi
 systemctl --user restart atuin-ai-server.service
 ~~~
 
+### update
+
+> Pulls the newest Atuin AI server image and restarts the services
+
+`mask atuin restart` alone reuses the locally cached `:latest` image. This task
+pulls it first; if the pull fails, the running services are left untouched.
+
+~~~sh
+podman pull ghcr.io/atuinsh/atuin-ai-server:latest && mask atuin restart
+~~~
+
 ### logs
 
 > Follows the Atuin AI services
