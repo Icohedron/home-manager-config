@@ -1,7 +1,6 @@
 # tuicr - terminal code review UI.
 #
-# The agent-facing skill that drives tuicr from pi is built in
-# ../pi-coding-agent/integrations.nix, because it is a pi extension point.
+# Pi and OMP build their release-matched agent skills with ./_skill.nix.
 { config, ... }:
 {
   flake.modules.homeManager.tuicr =
