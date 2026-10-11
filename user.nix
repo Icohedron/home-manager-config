@@ -19,6 +19,9 @@
   # Whether to use wayland or x11 applications
   useWayland = true; # Optional. Defaults to true
 
+  # Whether or not this is NixOS
+  isNixOS = false;
+
   # Optional. GPU backend llama.cpp is built against (see system/hardware.nix):
   #   "cuda"   - NVIDIA GPU, builds llama.cpp with cudaSupport
   #   "vulkan" - any GPU with a native Vulkan driver (default)

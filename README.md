@@ -133,6 +133,10 @@ cd ~/nix
   # Whether to use wayland or x11 applications
   useWayland = true; # Optional. Defaults to true
 
+  # Set true on NixOS; leave false on other Linux hosts so Home Manager
+  # enables targets.genericLinux. Defaults to false.
+  isNixOS = false;
+
   # Optional. GPU backend llama.cpp is built against (see system/hardware.nix):
   #   "cuda"   - NVIDIA GPU, builds llama.cpp with cudaSupport
   #   "vulkan" - any GPU with a native Vulkan driver (default)

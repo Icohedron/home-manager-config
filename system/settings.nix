@@ -21,6 +21,15 @@ in
       description = "Absolute path of the user's home directory.";
     };
 
+    isNixOS = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Whether this host runs NixOS. Set true on NixOS to disable Home
+        Manager's generic Linux integration; other Linux hosts use it.
+      '';
+    };
+
     gitUsername = mkOption {
       type = types.str;
       description = "Author name recorded in Git and Jujutsu commits.";

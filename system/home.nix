@@ -18,10 +18,8 @@
         ];
       };
 
-      # For non-NixOS *Linux* systems, enable generic Linux integration. It
-      # defines xdg.systemDirs, which is Linux-only, so it must not be set on
-      # Darwin.
-      targets.genericLinux.enable = pkgs.stdenv.hostPlatform.isLinux;
+      # Generic Linux integration is for non-NixOS Linux hosts only.
+      targets.genericLinux.enable = pkgs.stdenv.hostPlatform.isLinux && !config.user.isNixOS;
 
       # Let Home Manager install and manage itself.
       programs.home-manager.enable = true;
