@@ -48,6 +48,12 @@
     in
     {
       home.packages = [ pkgs.omp ];
+
+      # Register the complete pinned package without replacing other plugins.
+      home.activation.installOmpIHaveAdhd = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run ${lib.getExe pkgs.omp} plugin link ${inputs.i-have-adhd}
+      '';
+
       home.file =
         mattSkills
         // {
