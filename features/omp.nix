@@ -50,6 +50,12 @@
       home.packages = [ pkgs.omp ];
       home.file =
         mattSkills
+        // {
+          ".omp/agent/skills/i-have-adhd" = {
+            source = "${inputs.i-have-adhd}/skills/i-have-adhd";
+            recursive = true;
+          };
+        }
         // lib.optionalAttrs (herdrCfg.enable && herdrCfg.package != null) {
           # Use the extension bundled with the installed Herdr version. Its
           # source retains a .ts basename after Home Manager links it.

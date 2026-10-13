@@ -88,6 +88,10 @@ extend the same module. See `features/pi-coding-agent/`, which is split into
 Files and directories whose name starts with `_` are ignored by `import-tree`,
 so helper data can live next to a feature without being evaluated as a module.
 
+`features/omp.nix` installs the [i-have-adhd skill](https://github.com/ayghri/i-have-adhd)
+at `~/.omp/agent/skills/i-have-adhd`. Its upstream revision is pinned in
+`flake.lock`; update it with `nix flake update i-have-adhd`.
+
 ## Getting Started
 
 ### 1. Install Nix
