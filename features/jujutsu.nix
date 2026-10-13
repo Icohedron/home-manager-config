@@ -29,7 +29,7 @@ in
             };
             ui.editor = "hx";
             # Match Git's core.autocrlf=input: store LF without CRLF checkouts.
-            working-copy.eol-conversion = "input";
+            working-copy.eol-conversion = "none";
           }
           # Sign only our unsigned, mutable commits at `jj git push`, not on
           # every edit/rebase. Without a key, leave signing unconfigured.
