@@ -91,8 +91,10 @@ so helper data can live next to a feature without being evaluated as a module.
 `features/omp.nix` installs the [i-have-adhd plugin](https://github.com/ayghri/i-have-adhd)
 with `omp plugin link` during Home Manager activation, preserving other installed
 plugins. The skill is also available at `~/.omp/agent/skills/i-have-adhd`.
-Restart OMP after applying the configuration, then use `/i-have-adhd` to toggle
-the mode or `/i-have-adhd on` / `/i-have-adhd off` to set it explicitly.
+New OMP sessions enable ADHD mode by default with its status indicator hidden.
+Restart OMP after applying the configuration. Use `/i-have-adhd` to toggle the
+mode or `/i-have-adhd on` / `/i-have-adhd off` to set it explicitly; saved session
+state takes precedence over the default.
 The upstream revision is pinned in `flake.lock`; update it with
 `nix flake update i-have-adhd` and apply the configuration again.
 

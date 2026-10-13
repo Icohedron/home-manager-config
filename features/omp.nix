@@ -11,6 +11,11 @@
     let
       herdrCfg = config.programs.herdr;
 
+      iHaveAdhdConfig = (pkgs.formats.json { }).generate "i-have-adhd.json" {
+        alwaysOn = true;
+        hideStatus = true;
+      };
+
       tuicrSkill = import ./tuicr/_skill.nix {
         inherit pkgs lib;
         herdrPackage = herdrCfg.package;
@@ -57,6 +62,7 @@
       home.file =
         mattSkills
         // {
+          ".omp/agent/i-have-adhd.json".source = iHaveAdhdConfig;
           ".omp/agent/skills/i-have-adhd" = {
             source = "${inputs.i-have-adhd}/skills/i-have-adhd";
             recursive = true;
